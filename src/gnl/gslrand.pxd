@@ -19,6 +19,4 @@ cdef gsl_rng *r = gsl_rng_alloc(gsl_rng_mt19937)
 cdef class RandStream:
     """Wrapper class for GSL Random number generators"""
     cdef gsl_rng * _strm
-    cpdef __cinit__(self)
-    cpdef __call__(self, double sig)
     cdef double normal(self, double sig)
