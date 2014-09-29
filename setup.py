@@ -4,9 +4,12 @@ from distutils.extension import Extension
 from Cython.Distutils import build_ext
 import numpy as np                           # <---- New line
 
+_I = ['src/gnl']
+
 ext_modules = [Extension("gnl.gslrand",
     sources = ["src/gnl/gslrand.pyx"],
-    libraries = ['gsl', 'gslcblas']
+    libraries = ['gsl', 'gslcblas'],
+    include_dirs = ["src/gnl"] # This line is crucial
     )]
 
 setup(
