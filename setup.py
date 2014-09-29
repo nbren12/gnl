@@ -6,7 +6,7 @@ import numpy as np                           # <---- New line
 
 ext_modules = [Extension("gnl.gslrand",
     sources = ["src/gnl/gslrand.pyx"],
-    libraries = ['gsl', 'cblas']
+    libraries = ['gsl', 'gslcblas']
     )]
 
 setup(
@@ -16,6 +16,7 @@ setup(
     ext_modules = ext_modules,
     packages    = ['gnl'],
     package_dir = {'': 'src'},
+    package_data = {'gnl':['*.pxd',]}
 
 )
 # -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm

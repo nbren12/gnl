@@ -6,3 +6,4 @@ cdef class RandStream:
 
     cdef double normal(self, double sig)
 
+
