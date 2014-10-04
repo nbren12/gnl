@@ -270,7 +270,7 @@ def wk_smooth121(ff, axis):
 
     return
 
-def wk_plot(x, t, z, cmap = 'hot_r', smooth = True, title = None, ymax=None, xmax=10, colorbar= False,
+def wk_plot(x, t, z, ax = None, cmap = 'hot_r', smooth = True, title = None, ymax=None, xmax=10, colorbar= False,
             guides=False, **kwargs):
     """
     Plotting raw frequency-wavenumber power spectrum for x-t data
@@ -313,9 +313,11 @@ def wk_plot(x, t, z, cmap = 'hot_r', smooth = True, title = None, ymax=None, xma
 
 
     # Make the plot
+    if ax is None:
+        fig, ax = plt.subplots(1)
 
-    levs=  np.arange(-5.0, -1.5, .25)
-    plt.contourf(fx, ft[:nt2], np.log10(pz[:nt2, :]), levs, extend='both', cmap = cmap,  **kwargs)
+    levs=  np.arange(-6.0, -1.5, .25)
+    ax.contourf(fx, ft[:nt2], np.log10(pz[:nt2, :]), levs, extend='both', cmap = cmap,  **kwargs)
     if colorbar:
         plt.colorbar()
 
@@ -330,11 +332,11 @@ def wk_plot(x, t, z, cmap = 'hot_r', smooth = True, title = None, ymax=None, xma
             h = c**2 / 9.81
         c *= day_s / 4e7
 
-        plt.plot( fx, fx * c, 'k')
-        plt.plot( -fx, fx * c, 'k')
+        ax.plot( fx, fx * c, 'k')
+        ax.plot( -fx, fx * c, 'k')
 
         y = c *x
-        plt.text(x, y , '%.0f'%(h),
+        ax.text(x, y , '%.0f'%(h),
                 horizontalalignment='center',
                 verticalalignment='center',
                 bbox = {'facecolor':'white'})
@@ -348,13 +350,13 @@ def wk_plot(x, t, z, cmap = 'hot_r', smooth = True, title = None, ymax=None, xma
 
     # Add some visual gridline guides
 
-    plt.plot([0, 0], [0, 10], 'k--')
+    ax.plot([0, 0], [0, 10], 'k--')
 
 
     def day_gridlines(day, xloc=xmax-.5):
         day = float(day)
-        plt.plot([-40, 40], [ 1.0 / day, 1.0/day], 'k--')
-        plt.text(xloc, 1.0/day, '%.0f days'%day,
+        ax.plot([-40, 40], [ 1.0 / day, 1.0/day], 'k--')
+        ax.text(xloc, 1.0/day, '%.0f days'%day,
                     horizontalalignment='right',
                 )
 
@@ -371,8 +373,8 @@ def wk_plot(x, t, z, cmap = 'hot_r', smooth = True, title = None, ymax=None, xma
 
     plt.xlim([-xmax, xmax])
 
-    plt.xlabel('Zonal Wavenumber')
-    plt.ylabel('CPD')
+    ax.set_xlabel('Zonal Wavenumber')
+    ax.set_ylabel('CPD')
     # plt.title(cube.name())
 
 
