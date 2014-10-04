@@ -270,7 +270,8 @@ def wk_smooth121(ff, axis):
 
     return
 
-def wk_plot(x, t, z, cmap = 'hot_r', smooth = True, title = None, colorbar= False, **kwargs):
+def wk_plot(x, t, z, cmap = 'hot_r', smooth = True, title = None, ymax=None, xmax=10, colorbar= False,
+            guides=False, **kwargs):
     """
     Plotting raw frequency-wavenumber power spectrum for x-t data
 
@@ -314,7 +315,7 @@ def wk_plot(x, t, z, cmap = 'hot_r', smooth = True, title = None, colorbar= Fals
     # Make the plot
 
     levs=  np.arange(-5.0, -1.5, .25)
-    plt.contourf(fx, ft[:nt2], np.log10(pz[:nt2, :]), levs, extend='both', cmap = cmap, ymax=None, **kwargs)
+    plt.contourf(fx, ft[:nt2], np.log10(pz[:nt2, :]), levs, extend='both', cmap = cmap,  **kwargs)
     if colorbar:
         plt.colorbar()
 
@@ -339,25 +340,27 @@ def wk_plot(x, t, z, cmap = 'hot_r', smooth = True, title = None, colorbar= Fals
                 bbox = {'facecolor':'white'})
 
 
-    plot_symmetric_sw_waves(h=12, x= 18)
-    plot_symmetric_sw_waves(h=25, x = 17)
-    plot_symmetric_sw_waves(h=50, x= 13)
-    plot_symmetric_sw_waves(c = 50, x =6)
+    if guides:
+        plot_symmetric_sw_waves(h=12, x= 18)
+        plot_symmetric_sw_waves(h=25, x = 17)
+        plot_symmetric_sw_waves(h=50, x= 13)
+        plot_symmetric_sw_waves(c = 50, x =6)
 
     # Add some visual gridline guides
 
     plt.plot([0, 0], [0, 10], 'k--')
 
 
-    def day_gridlines(day, xloc=19):
+    def day_gridlines(day, xloc=xmax-.5):
         day = float(day)
         plt.plot([-40, 40], [ 1.0 / day, 1.0/day], 'k--')
         plt.text(xloc, 1.0/day, '%.0f days'%day,
                     horizontalalignment='right',
                 )
 
-    for i in [3, 6, 30]:
-        day_gridlines(i)
+    for i in [3, 6, 10, 30, 90]:
+        if i > 1/ymax:
+            day_gridlines(i)
 
 
     plt.grid('on')
@@ -365,6 +368,9 @@ def wk_plot(x, t, z, cmap = 'hot_r', smooth = True, title = None, colorbar= Fals
         plt.ylim([0, min(.8, ft.max())])
     else:
         plt.ylim([0, ymax])
+
+    plt.xlim([-xmax, xmax])
+
     plt.xlabel('Zonal Wavenumber')
     plt.ylabel('CPD')
     # plt.title(cube.name())
