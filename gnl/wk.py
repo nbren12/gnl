@@ -270,10 +270,21 @@ def wk_smooth121(ff, axis):
 
     return
 
-def wk_plot(x, t, z, ax = None, cmap = 'hot_r', smooth = True, title = None, ymax=None, xmax=10, colorbar= False,
+
+def wk_plot(x, t, z, ax=None, cmap='hot_r', smooth=True, title=None,
+            ymax=None, xmax=10, colorbar=False,
             guides=False, **kwargs):
     """
     Plotting raw frequency-wavenumber power spectrum for x-t data
+
+    Args:
+        x, t, z: the coordinates and values
+
+    Kwargs:
+        smooth (boolean): if true smooth the spectrum using the 1-2-1 filter
+        ymax ( > 0): highest frequency to plot
+        xmax ( > 0): highest wavenumber to plot
+
 
     Note:
 
