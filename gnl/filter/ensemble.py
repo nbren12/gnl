@@ -108,14 +108,17 @@ def obs_increment_EAKF(ensemble, observation, obs_error_var):
     if prior_var == 0:
         post_mean = prior_mean
         post_var = 0
+        var_ratio = 0.0
     elif obs_error_var == 0:
         # If obs_error_var is 0, posterior mean is observation and variance is 0
         post_mean = observation
         post_var = 0
+        var_ratio = 0.0
     else:
         # Use product of gaussians
         # Compute the posterior variance
         post_var = 1 / (1 / prior_var + 1 / obs_error_var)
+        var_ratio = post_var / prior_var
 
         # Compute posterior mean
         post_mean = post_var * (prior_mean / prior_var + observation / obs_error_var)
@@ -124,7 +127,6 @@ def obs_increment_EAKF(ensemble, observation, obs_error_var):
     updated_ensemble = ensemble - prior_mean + post_mean
 
     # Contract the ensemble to have the posterior_variance
-    var_ratio = post_var / prior_var
     updated_ensemble = sqrt(var_ratio) * (updated_ensemble - post_mean) \
         + post_mean
 
@@ -144,8 +146,13 @@ def get_state_increments(state_ens, obs_ens, obs_incs):
     # Regression model: state_ens = beta * obs_ens + eps
     stateMu = state_ens.mean()
     obsMu = obs_ens.mean()
-    beta = np.dot(state_ens - stateMu, obs_ens - obsMu)\
-        / np.sum((obs_ens-obsMu)**2)
+    sig2ob = np.sum((obs_ens-obsMu)**2)
+
+    if abs(sig2ob) > 1e-10:
+        beta = np.dot(state_ens - stateMu, obs_ens - obsMu)\
+            / sig2ob
+    else:
+        beta = 0.0
 
     # Original
     state_incs = obs_incs * beta
@@ -207,6 +214,31 @@ class SequentialKFAnalysis(EnKFAnalysis):
                     ensemble[j, :] += state_incs * cov_factor
 
         return ensemble
+
+
+class Observer(object):
+
+    """Object for generating observations"""
+
+    def __init__(self, G, Ro):
+        """
+        Args:
+            G (callable): observation operator with prototype
+                obs = G(state)
+            Ro (2d or 1d array): error covariance
+        """
+
+        self._G  = G
+        self._Ro = Ro
+
+    def  _call__(self, ens):
+        nv = ens.shape[0]
+        if ens.ndim == 1:
+            ens.shape = (nv, 1)
+
+        ne = ens.shape[1]
+
+        # TODO finish
 
 def test_enkf_eafkf():
     """
