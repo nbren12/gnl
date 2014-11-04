@@ -160,7 +160,8 @@ def get_state_increments(state_ens, obs_ens, obs_incs):
 
 
 class SequentialKFAnalysis(EnKFAnalysis):
-    """Object for performing ensemble kalman filters on independent observations
+    """Object for performing ensemble kalman filters on independent
+    observations
 
     A localization interface is implemented, but by default, no localization is
     performed. Subclasses with localization should override `_localized`.
