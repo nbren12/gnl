@@ -17,3 +17,11 @@ def nbsubplots(nrows=1, ncols=1, w=None, h=1.0, aspect=1.0, **kwargs):
         w = h / aspect
 
     return  plt.subplots(nrows,ncols, figsize=(w * ncols ,h * nrows), **kwargs)
+
+def vdot(*arrs):
+    """Variadic numpy dot function"""
+
+    if len(arrs) == 2:
+        return dot(**arrs)
+    else:
+        return vdot(arrs[0], vdot(*arrs[1:]))

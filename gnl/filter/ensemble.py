@@ -4,14 +4,6 @@ from numpy.random import multivariate_normal
 from numpy import sqrt, dot
 from toolz.curried import *
 
-def vdot(*arrs):
-    """Variadic numpy dot function"""
-
-    if len(arrs) == 2:
-        return dot(**arrs)
-    else:
-        return vdot(arrs[0], vdot(*arrs[1:]))
-
 class EnKFAnalysis(object):
     """
     Object for performing ensemble kalman filter
