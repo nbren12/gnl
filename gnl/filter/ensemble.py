@@ -213,30 +213,15 @@ class SequentialKFAnalysis(EnKFAnalysis):
 
         return ensemble
 
+def observer_from_mat(G):
+    G = G.copy()
+    def observer(arr, axis=0, i=Ellipsis):
+        g = G[i,:]
+        if g.ndim == 1:
+            g.shape = (1, len(g))
+        return np.tensordot(arr, g, (axis, 1))
 
-class Observer(object):
-
-    """Object for generating observations"""
-
-    def __init__(self, G, Ro):
-        """
-        Args:
-            G (callable): observation operator with prototype
-                obs = G(state)
-            Ro (2d or 1d array): error covariance
-        """
-
-        self._G  = G
-        self._Ro = Ro
-
-    def  _call__(self, ens):
-        nv = ens.shape[0]
-        if ens.ndim == 1:
-            ens.shape = (nv, 1)
-
-        ne = ens.shape[1]
-
-        # TODO finish
+    return observer
 
 def test_enkf_eafkf():
     """
