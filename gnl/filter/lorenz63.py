@@ -38,9 +38,15 @@ tout = np.arange(nt) * dt
 y_truth = odeint(rhs, [1.0, 1.0, 1.0], tout)
 
 # Generate Observations
-G = np.eye(nv)
+def G(arr, i=Ellipsis, axis=0):
+
+    s = [Ellipsis,]*arr.ndim
+    s[axis] = i
+
+    return arr[s]
+
 Ro = np.eye(3) * 4**2
-obs = dot(y_truth, G.T) + multivariate_normal(np.ones(nv), Ro, len(tout))
+obs = G(y_truth) + multivariate_normal(np.ones(nv), Ro, len(tout))
 
 # Initialize ensemble
 ne = 10

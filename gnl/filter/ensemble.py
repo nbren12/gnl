@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.linalg import solve, sqrtm, svd, lstsq
+from scipy.linalg import solve, cholesky, svd, lstsq
 from numpy.random import multivariate_normal
 from numpy import sqrt, dot
 from toolz.curried import *
@@ -11,7 +11,6 @@ def vdot(*arrs):
         return dot(**arrs)
     else:
         return vdot(arrs[0], vdot(*arrs[1:]))
-
 
 class EnKFAnalysis(object):
     """
@@ -29,7 +28,7 @@ class EnKFAnalysis(object):
         """TODO: Docstring for __init__.
 
         Args:
-            G (matrix): observation operator possibly nonlinear
+            G: observation operator with signature G(arr, axis=0, i=Ellipsis)
             Ro (2d or 1d array): observation noise covariance
         """
         self._G = G
@@ -38,7 +37,7 @@ class EnKFAnalysis(object):
         self._r  = r
 
         if Ro.ndim == 2:
-            self._Ro2 =sqrtm(Ro)
+            self._Ro2 = cholesky(Ro)
         else:
             self._Ro2 = sqrt(Ro)
 
@@ -65,7 +64,7 @@ class EnKFAnalysis(object):
         U  = ensemble-mu[:,None]
 
         # V = np.apply_along_axis(G, 0, ensemble)
-        V = dot(G, ensemble)
+        V = G(ensemble)
         # V = V - G(mu)[:,None]
         V = V - V.mean(axis=1)[:,None]
 
@@ -77,7 +76,7 @@ class EnKFAnalysis(object):
 
         for k in range(ne):
             dev = obs + np.dot(self._Ro2, np.random.randn(nvar)) \
-                    - dot(G, ensemble[:,k])
+                    - G(ensemble[:,k], axis=0)
 
             anl[:,k] = ensemble[:,k] +  U.dot(V.T.dot(solve(A, dev)))
 
@@ -166,6 +165,10 @@ class SequentialKFAnalysis(EnKFAnalysis):
     A localization interface is implemented, but by default, no localization is
     performed. Subclasses with localization should override `_localized`.
 
+    Args:
+        G (callable): prototype `G(ensemble, i=i)` returns the ith observation
+            for each ensemble member
+
     """
 
 
@@ -195,12 +198,13 @@ class SequentialKFAnalysis(EnKFAnalysis):
 
         nobs = obs.shape[0]
 
+        G = self._G
+
         for i in range(nobs):
-            g  = self._G[i,:]
             ro = self._Ro[i]
 
             # Compute increments of ensemble member observations
-            obs_ensemble = dot(g, ensemble)
+            obs_ensemble = G(ensemble, i=i, axis=0)
             ob = obs[i]
             obs_inc, errflag = obs_increment_EAKF(obs_ensemble, ob, ro)
 
