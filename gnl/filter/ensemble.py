@@ -206,6 +206,7 @@ class SequentialKFAnalysis(EnKFAnalysis):
                     # Compute state increments using least squares
                     state_incs = get_state_increments(ensemble[j, :],
                                                       obs_ensemble, obs_inc)
+                    state_incs.shape = (len(state_incs),)
 
                     # Update ensemble
                     ensemble[j, :] += state_incs * cov_factor
