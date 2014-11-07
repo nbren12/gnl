@@ -213,6 +213,43 @@ class SequentialKFAnalysis(EnKFAnalysis):
 
         return ensemble
 
+class State(object):
+    """Wraps the loading and observing operators"""
+
+    def __init__(self, arr, t=0):
+        self._arr = arr
+        self._t   = t
+
+    @staticmethod
+    def from_ensemble(ensemble):
+        """
+        Create list of states from ensemble
+
+        Args:
+            ensemble: (nvar, nens) array_like
+
+        Returns:
+            iterator of State objects
+        """
+        return (State(ensemble[:,i]) for i in range(ensemble.shape[-1]))
+
+    def observe(self, i=Ellipsis):
+        raise NotImplementedError
+
+
+    def __getattr__(self, attr):
+        # see if this object has attr
+        # NOTE do not use hasattr, it goes into
+        # infinite recurrsion
+        if attr in self.__dict__:
+            # this object has it
+            return getattr(self, attr)
+        # proxy to the wrapped object
+        return getattr(self._arr, attr)
+
+    def __getitem__(self, *args,**kw):
+        return self._arr.__getitem__(*args, **kw)
+
 def observer_from_mat(G):
     G = G.copy()
     def observer(arr, axis=0, i=Ellipsis):
