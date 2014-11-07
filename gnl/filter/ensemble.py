@@ -220,8 +220,8 @@ class State(object):
         self._arr = arr
         self._t   = t
 
-    @staticmethod
-    def from_ensemble(ensemble):
+    @classmethod
+    def from_ensemble(cls, ensemble):
         """
         Create list of states from ensemble
 
@@ -231,7 +231,7 @@ class State(object):
         Returns:
             iterator of State objects
         """
-        return (State(ensemble[:,i]) for i in range(ensemble.shape[-1]))
+        return (cls(ensemble[:,i]) for i in range(ensemble.shape[-1]))
 
     def observe(self, i=Ellipsis):
         raise NotImplementedError

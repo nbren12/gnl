@@ -12,6 +12,27 @@ from matplotlib import pyplot as plt
 import numpy as np
 from numpy import dot
 
+# Generate Observations
+def observe(arr, i=Ellipsis, axis=0):
+    s = [Ellipsis,]*arr.ndim
+    s[axis] = i
+
+    return arr[s]
+
+class Lorenz63State(State):
+    """Wraps the loading and observing operators"""
+
+    def __init__(self, *args, obs='krza', **kwargs):
+        super(Lorenz63State, self).__init__(*args, **kwargs)
+
+        fullobs = 'krza'
+
+        self.obs_slice = [fullobs.index(ob) for ob in obs]
+        self.obs = obs
+
+
+    def observe(self, **kw):
+        return G(self._arr, **kw)
 
 # Right hand side of loren63 system
 def rhs(U, t, sigma=10, rho=28, b=8/3):
@@ -37,14 +58,8 @@ nv = 3
 tout = np.arange(nt) * dt
 y_truth = odeint(rhs, [1.0, 1.0, 1.0], tout)
 
-# Generate Observations
-def G(arr, i=Ellipsis, axis=0):
 
-    s = [Ellipsis,]*arr.ndim
-    s[axis] = i
-
-    return arr[s]
-
+G = observe
 Ro = np.eye(3) * 4**2
 obs = G(y_truth) + multivariate_normal(np.ones(nv), Ro, len(tout))
 
