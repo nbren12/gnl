@@ -16,15 +16,15 @@ class EnKFAnalysis(object):
 
 
     """
-    def __init__(self, G, Ro, r=1.0):
+    def __init__(self, state_cls, Ro, r=1.0):
         """TODO: Docstring for __init__.
 
         Args:
             G: observation operator with signature G(arr, axis=0, i=Ellipsis)
             Ro (2d or 1d array): observation noise covariance
         """
-        self._G = G
         self._Ro = Ro
+        self._state_cls = state_cls
 
         self._r  = r
 
@@ -44,7 +44,6 @@ class EnKFAnalysis(object):
         :returns: analysis ensemble members (shape is same as ensemble)
         """
 
-        G = self._G
         Ro = self._Ro
         r  = self._r
 
@@ -190,13 +189,14 @@ class SequentialKFAnalysis(EnKFAnalysis):
 
         nobs = obs.shape[0]
 
-        G = self._G
-
         for i in range(nobs):
             ro = self._Ro[i]
 
             # Compute increments of ensemble member observations
-            obs_ensemble = G(ensemble, i=i, axis=0)
+            obs_ensemble = np.vstack(st.observe(i=i) for st in 
+                                     self._state_cls.from_ensemble(ensemble))
+            obs_ensemble.shape = (-1,)
+                                     
             ob = obs[i]
             obs_inc, errflag = obs_increment_EAKF(obs_ensemble, ob, ro)
 

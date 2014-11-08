@@ -68,7 +68,7 @@ ne = 10
 ens = np.ones((nv, ne)) + multivariate_normal(np.ones(nv), Ro*.1, ne).T
 
 # Analysis
-analyzer = SequentialKFAnalysis(G, np.diag(Ro))
+analyzer = SequentialKFAnalysis(Lorenz63State, np.diag(Ro))
 
 # Filter driver object
 fd = FilterDriver(ens, evolve63, analyzer)
