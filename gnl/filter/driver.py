@@ -3,7 +3,7 @@ class FilterDriver(object):
     def __init__(self, ensemble, evolver, analyzer):
         """
         Args:
-            ensemble (2d array): shape is (num state, num ensemble members)
+            ensemble (2d array): (num state, num ensemble members)
 
             evolver: a callable that propagates each ensemble member with
                 prototype `prior_member = evolver(ensemble_member, tcur, tout)`
@@ -31,3 +31,28 @@ class FilterDriver(object):
     def analyze(self, obs):
         """Analysis step"""
         self._ensemble = self._analyzer(self._ensemble, obs)
+
+    
+    def iter(self, tout, obs):
+        """Iterator for predict analyze loop"""
+
+        nt = len(tout)
+        ob = next(obs)
+
+        # Assimilate Observations
+
+        self.analyze(ob)
+        yield self._ensemble
+
+        for i in range(1,nt):
+            print('Iteration {i} of {n}'.format(i=i, n=nt), end='\r')
+
+            # Prediction
+            self.predict(tout[i-1], tout[i])
+
+            ob = next(obs)
+
+            # Analysis
+            self.analyze(ob)
+
+            yield self._ensemble
