@@ -24,7 +24,7 @@ class EnKFAnalysis(object):
             Ro (2d or 1d array): observation noise covariance
         """
         self._G = G
-        self._Ro = Ro
+        self._Ro = Ro.copy()
 
         self._r  = r
 
