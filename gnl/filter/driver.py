@@ -1,3 +1,5 @@
+from joblib import Parallel, delayed
+
 class FilterDriver(object):
 
     def __init__(self, ensemble, evolver, analyzer):
@@ -21,12 +23,15 @@ class FilterDriver(object):
 
         self._num_ensemble = ensemble.shape[1]
 
-    def predict(self, tcur, tout):
+    def predict(self, tcur, tout, n_jobs=2):
         """Evolve ensemble members from tcur to tout."""
 
-        for i in range(self._num_ensemble):
-            cur_member = self._ensemble[:,i]
-            cur_member[:] = self._evolver(cur_member, tcur, tout)
+        ne = self._num_ensemble
+        vecs = Parallel(n_jobs=n_jobs)(delayed(self._evolver)(self._ensemble[:,i],tcur, tout) 
+                                  for i in range(ne))
+        
+        for i, vec in enumerate(vecs):
+            self._ensemble[:,i] = vec
 
     def analyze(self, obs):
         """Analysis step"""
