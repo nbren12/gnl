@@ -1,4 +1,5 @@
 from functools import wraps
+from numpy import dot
 
 def argkws(f):
     """Function decorator which maps f((args, kwargs)) to f(*args, **kwargs)"""
@@ -18,10 +19,17 @@ def nbsubplots(nrows=1, ncols=1, w=None, h=1.0, aspect=1.0, **kwargs):
 
     return  plt.subplots(nrows,ncols, figsize=(w * ncols ,h * nrows), **kwargs)
 
-def vdot(*arrs):
-    """Variadic numpy dot function"""
+def vdot(*arrs, l2r=True):
+    """Variadic numpy dot function
+    
+    Args:
+        *arrs:
+
+        l2r (optional): if True then evaluate dot products from left to right
+            (default: True)
+    """
 
     if len(arrs) == 2:
-        return dot(**arrs)
+        return dot(*arrs)
     else:
         return vdot(arrs[0], vdot(*arrs[1:]))

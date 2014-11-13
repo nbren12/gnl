@@ -1,6 +1,12 @@
+from multiprocessing import Pool
+
+def caller(args):
+    evolve, vec, tcur, tout = args
+    return evolve(vec, tcur, tout)
+
 class FilterDriver(object):
 
-    def __init__(self, ensemble, evolver, analyzer):
+    def __init__(self, ensemble, evolver, analyzer, p=None):
         """
         Args:
             ensemble (2d array): (num state, num ensemble members)
@@ -20,13 +26,24 @@ class FilterDriver(object):
         self._analyzer = analyzer
 
         self._num_ensemble = ensemble.shape[1]
+        self._processing_pool = p 
 
     def predict(self, tcur, tout):
         """Evolve ensemble members from tcur to tout."""
+        
+        if self._processing_pool is None:
+            for i in range(self._num_ensemble):
+                cur_member = self._ensemble[:,i]
+                cur_member[:] = self._evolver(cur_member, tcur, tout)
+        else:
+            # ens = p.map(caller, ((self._evolver, self._ensemble[:,i], tcur, tout) 
+            #                 for  i in range(self._num_ensemble)))
+            ens = self._processing_pool.starmap(self._evolver, ((self._ensemble[:,i], tcur, tout) 
+                            for  i in range(self._num_ensemble)))
 
-        for i in range(self._num_ensemble):
-            cur_member = self._ensemble[:,i]
-            cur_member[:] = self._evolver(cur_member, tcur, tout)
+            for i, en in enumerate(ens):
+                self._ensemble[:,i] = en
+
 
     def analyze(self, obs):
         """Analysis step"""
