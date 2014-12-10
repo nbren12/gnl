@@ -1,6 +1,9 @@
 from scipy.linalg import solve
 from ..util import vdot
+import numpy as np
 
+def conjpose(A):
+    return np.conj(A.T)
 
 def kalman_filter(prior_mean, prior_var, obs, obs_var, obs_mat):
     """Kalman filter function
@@ -19,17 +22,16 @@ def kalman_filter(prior_mean, prior_var, obs, obs_var, obs_mat):
     """
 
     # H Sigma H' + R
-    tmp1 = vdot(obs_mat, prior_var, obs_mat.T) + obs_var
+    tmp1 = vdot(obs_mat, prior_var, conjpose(obs_mat)) + obs_var
 
     inov = obs - vdot(obs_mat, prior_mean)
     post_mean = prior_mean + \
-                vdot(prior_var, obs_mat.T, solve(tmp1, inov, sym_pos=True))
+                vdot(prior_var, conjpose(obs_mat), solve(tmp1, inov, sym_pos=True))
     
     post_var  = prior_var \
-                -vdot(prior_var, obs_mat.T, 
+                -vdot(prior_var, conjpose(obs_mat), 
                       solve(tmp1, vdot(obs_mat, prior_var), sym_pos=True))
 
 
     return post_mean, post_var
-
 
