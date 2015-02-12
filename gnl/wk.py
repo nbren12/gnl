@@ -20,20 +20,6 @@ from numba import f8, void, jit, autojit
 day_s = 86400.0
 hour_s= 3600.0
 
-def fftdiff(u, L = 4e7, axis=-1):
-    """
-    Function for calculated the derivative of a periodic signal using fft.
-
-    L is the physical length of the signal (default = 4e7, m aroun earth)
-    """
-    from numpy.fft import fft, ifft, fftfreq
-    nx = u.shape[axis]
-    x = np.linspace(0, L, nx, endpoint=False)
-    k = fftfreq( nx, 1.0/nx )
-    fd = fft(u, axis=axis) * k * 1j * 2 * pi / L
-    ud = np.real( ifft(fd, axis=axis) )
-
-    return ud
 
 def pgram(x, fs=1.0):
     """
