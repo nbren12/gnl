@@ -2,6 +2,21 @@ from functools import wraps
 from numpy import dot
 import numpy as np
 
+# embedded ipython from http://stackoverflow.com/questions/15167200/how-do-i-embed-an-ipython-interpreter-into-an-application-running-in-an-ipython
+try:
+    get_ipython
+except NameError:
+    banner=exit_msg=''
+else:
+    banner = '*** Nested interpreter ***'
+    exit_msg = '*** Back in main IPython ***'
+
+# First import the embed function
+from IPython.frontend.terminal.embed import InteractiveShellEmbed
+# Now create the IPython shell instance. Put ipshell() anywhere in your code
+# where you want it to open.
+ipshell = InteractiveShellEmbed(banner1=banner, exit_msg=exit_msg)
+
 def argkws(f):
     """Function decorator which maps f((args, kwargs)) to f(*args, **kwargs)"""
     @wraps(f)
@@ -45,7 +60,7 @@ def fftdiff(u, L = 4e7, axis=-1):
     nx = u.shape[axis]
     x = np.linspace(0, L, nx, endpoint=False)
     k = fftfreq( nx, 1.0/nx )
-    fd = fft(u, axis=axis) * k * 1j * 2 * pi / L
+    fd = fft(u, axis=axis) * k * 1j * 2 * np.pi / L
     ud = np.real( ifft(fd, axis=axis) )
 
     return ud
