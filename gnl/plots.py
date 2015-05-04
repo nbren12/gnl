@@ -1,6 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+article_style = {
+    'axes.titlesize': 'medium',
+    'axes.labelsize': 'small'
+}
 
 def loghist(x, logy=True, gaussian_comparison=True, ax=None,
             lower_percentile=1e-5, upper_percentile=100-1e-5,
