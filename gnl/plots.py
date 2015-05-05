@@ -6,6 +6,13 @@ article_style = {
     'axes.labelsize': 'small'
 }
 
+def figlabel(*args, fig=None, **kwargs):
+    """Put label in figure coords"""
+    if fig is None:
+        fig = plt.gcf()
+    plt.text(*args, transform=fig.transFigure, **kwargs)
+
+
 def loghist(x, logy=True, gaussian_comparison=True, ax=None,
             lower_percentile=1e-5, upper_percentile=100-1e-5,
             label='Sample'):
