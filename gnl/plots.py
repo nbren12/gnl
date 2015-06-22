@@ -45,9 +45,9 @@ def loghist(x, logy=True, gaussian_comparison=True, ax=None,
         mles = norm.fit(x)
         gpdf = norm.pdf(xx, *mles)
         if logy:
-            ax.plot(xx, np.log(gpdf), 'k', label='Gauss')
+            ax.plot(xx, np.log(gpdf),  label='Gauss')
         else:
-            ax.plot(xx, gpdf, 'k', label='Gauss')
+            ax.plot(xx, gpdf,  label='Gauss')
 
     ax.set_xlim([p1, p2])
 
