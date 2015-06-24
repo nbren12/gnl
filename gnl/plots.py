@@ -59,3 +59,39 @@ def test_loghist():
     loghist(x)
     plt.legend()
     plt.show()
+
+def plot2d(x, y, z, ax=None, cmap='RdGy'):
+    """ Plot dataset using NonUniformImage class
+    
+    Args:
+        x (nx,)
+        y (ny,)
+        z (nx,nz)
+        
+    """
+    from matplotlib.image import NonUniformImage
+    if ax is None:
+        fig, ax= plt.subplots()
+        
+   
+    xlim = (x.min(), x.max())
+    ylim = (y.min(), y.max()) 
+    
+    im = NonUniformImage(ax, interpolation='bilinear', extent=xlim + ylim,
+                        cmap=cmap)
+   
+    im.set_data(x,y,z)
+    ax.images.append(im)
+    #plt.colorbar(im)
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+    
+    return im
+
+def test_plot2d():
+    x = np.arange(10)
+    y = np.arange(20)
+    
+    z = x[None,:]**2 + y[:,None]**2
+    plot2d(x,y,z)
+    plt.show()
