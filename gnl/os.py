@@ -12,4 +12,10 @@ def findroot(path='.'):
             break
 
     return d
+    
+
+def addroot2path(path="."):
+    """Add root of project to path"""
+    import sys
+    sys.path.insert(0, findroot(path))
 
