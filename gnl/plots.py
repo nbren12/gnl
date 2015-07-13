@@ -95,3 +95,40 @@ def test_plot2d():
     z = x[None,:]**2 + y[:,None]**2
     plot2d(x,y,z)
     plt.show()
+
+
+def func_plot(df, func, w=1, aspect=1.0, figsize=None, layout=(-1,3),
+              sharex=False, sharey=False,
+             **kwargs):
+    """Plot every column in dataframe with func(series, ax=ax, **kwargs)"""
+    ncols = df.shape[1]
+
+    q, r = divmod(ncols, layout[-1])
+
+    nrows = q
+    if r> 0:
+        nrows +=1
+
+    # Adjust figsize
+    if not figsize:
+        figsize = (w * layout[-1], w * aspect * nrows)
+    fig, axs = plt.subplots(nrows, layout[1], figsize=figsize, sharex=sharex, sharey=sharey)
+    lax = axs.ravel().tolist()
+    for i in range(ncols):
+        ser = df.iloc[:,i]
+        ax  = lax.pop(0)
+        ax.text(.1,.8, df.columns[i], bbox=dict(fc='white'), transform=ax.transAxes)
+        func(ser, ax=ax, **kwargs)
+
+    for ax in lax:
+        fig.delaxes(ax)
+
+def pgram(x,ax=None):
+    from scipy.signal import welch
+    f, Pxx = welch(x.values)
+    if not ax:
+        ax = plt.gca()
+
+    ax.loglog(f, Pxx)
+    ax.grid()
+    ax.autoscale(True, tight=True)
