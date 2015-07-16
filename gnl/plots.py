@@ -15,7 +15,7 @@ def figlabel(*args, fig=None, **kwargs):
 
 def loghist(x, logy=True, gaussian_comparison=True, ax=None,
             lower_percentile=1e-5, upper_percentile=100-1e-5,
-            label='Sample'):
+            label='Sample', colors=('k', 'g')):
     """
     Plot log histogram of given samples with normal comparison using
     kernel density estimation
@@ -25,6 +25,7 @@ def loghist(x, logy=True, gaussian_comparison=True, ax=None,
 
     if ax is None:
         ax = plt.axes()
+
 
     p = gaussian_kde(x)
 
@@ -39,15 +40,15 @@ def loghist(x, logy=True, gaussian_comparison=True, ax=None,
     else:
         y = p(xx)
 
-    ax.plot(xx, y, label=label)
+    ax.plot(xx, y, label=label, c=colors[0])
 
     if gaussian_comparison:
         mles = norm.fit(x)
         gpdf = norm.pdf(xx, *mles)
         if logy:
-            ax.plot(xx, np.log(gpdf),  label='Gauss')
+            ax.plot(xx, np.log(gpdf),  label='Gauss', c=colors[1])
         else:
-            ax.plot(xx, gpdf,  label='Gauss')
+            ax.plot(xx, gpdf,  label='Gauss', c=colors[1])
 
     ax.set_xlim([p1, p2])
 
