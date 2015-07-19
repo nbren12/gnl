@@ -1,4 +1,5 @@
 from functools import wraps
+from toolz import *
 from numpy import dot
 import numpy as np
 
@@ -17,23 +18,59 @@ from IPython.terminal.embed import InteractiveShellEmbed
 # where you want it to open.
 ipshell = InteractiveShellEmbed(banner1=banner, exit_msg=exit_msg)
 
+
+## Functional programming stuff
 def argkws(f):
     """Function decorator which maps f((args, kwargs)) to f(*args, **kwargs)"""
     @wraps(f)
     def fun(tup):
         args, kws = tup
-        return fun(*args, **kw)
+        return f(*args, **kw)
 
-def nbsubplots(nrows=1, ncols=1, w=None, h=1.0, aspect=1.0, **kwargs):
-    """Make a set of axes with fixed aspect ratio"""
-    from matplotlib import pyplot as plt
+def apply(f, *args, **kwargs):
+    """Useful for making composable functions"""
+    callkwargs = {}
+    callargs = []
 
-    if w is not None:
-        h = w * aspect
-    else:
-        w = h / aspect
+    if len(args) >= 1:
+        callargs += args[0]
+    if len(args) >= 2:
+        callkwargs.update(args[1])
 
-    return  plt.subplots(nrows,ncols, figsize=(w * ncols ,h * nrows), **kwargs)
+    callkwargs.update(kwargs)
+
+    return f(*callargs, **callkwargs)
+
+
+def icall(name, *ar, **kw):
+    """A method for calling instance methods of an object by name or static
+    reference. It is designed to be used with partial, curry, and thread_last.
+    To do this the returned function accepts the object as the final argument
+    rather than the first:
+
+    f(obj, *args ) --> icall(f)(*args, obj)
+
+    pipe(rand(100), process, processagain, icall('sum', 10, axis=0))
+
+    Args: name of instancemethod or func which takes object as first arg
+
+    """
+    # TODO: use functoools.wraps if `name` is a function
+    def func(*args, **kwargs):
+        x = args[-1]
+        args = args[:-1]
+
+        if isinstance(name, str):
+            f = getattr(x,name)
+        else:
+            f = name
+        cf = curry(f, *ar, **kw)
+        return cf(*args, **kwargs)
+
+    return func
+
+
+## Math stuff
 
 def vdot(*arrs, l2r=True):
     """Variadic numpy dot function
