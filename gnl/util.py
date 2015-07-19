@@ -1,4 +1,5 @@
 from functools import wraps
+from toolz import *
 from numpy import dot
 import numpy as np
 
@@ -26,6 +27,50 @@ def argkws(f):
         args, kws = tup
         return f(*args, **kw)
 
+def apply(f, *args, **kwargs):
+    """Useful for making composable functions"""
+    callkwargs = {}
+    callargs = []
+
+    if len(args) >= 1:
+        callargs += args[0]
+    if len(args) >= 2:
+        callkwargs.update(args[1])
+
+    callkwargs.update(kwargs)
+
+    return f(*callargs, **callkwargs)
+
+
+def icall(name, *ar, **kw):
+    """A method for calling instance methods of an object by name or static
+    reference. It is designed to be used with partial, curry, and thread_last.
+    To do this the returned function accepts the object as the final argument
+    rather than the first:
+
+    f(obj, *args ) --> icall(f)(*args, obj)
+
+    pipe(rand(100), process, processagain, icall('sum', 10, axis=0))
+
+    Args: name of instancemethod or func which takes object as first arg
+
+    """
+    # TODO: use functoools.wraps if `name` is a function
+    def func(*args, **kwargs):
+        x = args[-1]
+        args = args[:-1]
+
+        if isinstance(name, str):
+            f = getattr(x,name)
+        else:
+            f = name
+        cf = curry(f, *ar, **kw)
+        return cf(*args, **kwargs)
+
+    return func
+
+
+## Math stuff
 
 def vdot(*arrs, l2r=True):
     """Variadic numpy dot function
