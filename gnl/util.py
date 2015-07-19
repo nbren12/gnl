@@ -42,6 +42,11 @@ def apply(f, *args, **kwargs):
     return f(*callargs, **callkwargs)
 
 
+def rgetattr(name, x):
+    """Getattr with reversed args for thread_last """
+
+    return getattr(x,name)
+
 def icall(name, *ar, **kw):
     """A method for calling instance methods of an object by name or static
     reference. It is designed to be used with partial, curry, and thread_last.
