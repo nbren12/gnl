@@ -41,7 +41,7 @@ def apply(f, *args, **kwargs):
 
     return f(*callargs, **callkwargs)
 
-
+@curry
 def rgetattr(name, x):
     """Getattr with reversed args for thread_last """
 
