@@ -75,6 +75,19 @@ def icall(name, *ar, **kw):
     return func
 
 
+def dfassoc(df, key, val, *args):
+    """Datafram compatible assoc"""
+    df = df.copy()
+    df[key] = val
+
+    while(args):
+        key, val = args[:2]
+        df[key] = val
+        args = args[2:]
+
+
+    return df
+
 ## Math stuff
 
 def vdot(*arrs, l2r=True):
