@@ -97,8 +97,12 @@ def plot2d(x, y, z, ax=None, cmap='RdGy', **kw):
     #plt.colorbar(im)
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
+
+
+    def update(z):
+        return im.set_data(x,y,z,**kw)
     
-    return im
+    return im, update
 
 def test_plot2d():
     x = np.arange(10)
