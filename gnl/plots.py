@@ -26,7 +26,8 @@ def figlabel(*args, fig=None, **kwargs):
 
 def loghist(x, logy=True, gaussian_comparison=True, ax=None,
             lower_percentile=1e-5, upper_percentile=100-1e-5,
-            label='Sample', colors=('k', 'g')):
+            label='Sample', colors=('k', 'g'),
+            cstyle={}):
     """
     Plot log histogram of given samples with normal comparison using
     kernel density estimation
@@ -57,9 +58,9 @@ def loghist(x, logy=True, gaussian_comparison=True, ax=None,
         mles = norm.fit(x)
         gpdf = norm.pdf(xx, *mles)
         if logy:
-            ax.plot(xx, np.log(gpdf),  label='Gauss', c=colors[1])
+            ax.plot(xx, np.log(gpdf),  label='Gauss', **cstyle)
         else:
-            ax.plot(xx, gpdf,  label='Gauss', c=colors[1])
+            ax.plot(xx, gpdf,  label='Gauss', **cstyle)
 
     ax.set_xlim([p1, p2])
 
@@ -72,7 +73,7 @@ def test_loghist():
     plt.legend()
     plt.show()
 
-def plot2d(x, y, z, ax=None, cmap='RdGy', **kw):
+def plot2d(x, y, z, ax=None, cmap='RdGy', norm=None, **kw):
     """ Plot dataset using NonUniformImage class
     
     Args:
@@ -91,6 +92,10 @@ def plot2d(x, y, z, ax=None, cmap='RdGy', **kw):
     
     im = NonUniformImage(ax, interpolation='bilinear', extent=xlim + ylim,
                         cmap=cmap)
+
+
+    if norm is not None:
+        im.set_norm(norm)
    
     im.set_data(x,y,z, **kw)
     ax.images.append(im)
