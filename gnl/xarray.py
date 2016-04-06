@@ -1,4 +1,4 @@
-import xarray as xray
+import xarray as xarray
 import numpy as np
 from . import util
 
@@ -27,7 +27,7 @@ def integrate(x, axis='z'):
     coords = {key:x.coords[key] for key in dims}
     
     tot = np.trapz(x.values, x=x.coords[axis], axis=axisnum)
-    return xray.DataArray(tot, coords, dims)
+    return xarray.DataArray(tot, coords, dims)
 
 
 def phaseshift(u500, c=0):
