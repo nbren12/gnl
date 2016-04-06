@@ -3,29 +3,16 @@ from toolz import *
 from numpy import dot
 import numpy as np
 
-# embedded ipython from http://stackoverflow.com/questions/15167200/how-do-i-embed-an-ipython-interpreter-into-an-application-running-in-an-ipython
-try:
-    get_ipython
-except NameError:
-    banner=exit_msg=''
-else:
-    banner = '*** Nested interpreter ***'
-    exit_msg = '*** Back in main IPython ***'
 
-# First import the embed function
-from IPython.terminal.embed import InteractiveShellEmbed
-# Now create the IPython shell instance. Put ipshell() anywhere in your code
-# where you want it to open.
-ipshell = InteractiveShellEmbed(banner1=banner, exit_msg=exit_msg)
-
-
-## Functional programming stuff
+# Functional programming stuff
 def argkws(f):
     """Function decorator which maps f((args, kwargs)) to f(*args, **kwargs)"""
+
     @wraps(f)
     def fun(tup):
         args, kws = tup
         return f(*args, **kw)
+
 
 def apply(f, *args, **kwargs):
     """Useful for making composable functions"""
@@ -41,11 +28,13 @@ def apply(f, *args, **kwargs):
 
     return f(*callargs, **callkwargs)
 
+
 @curry
 def rgetattr(name, x):
     """Getattr with reversed args for thread_last """
 
-    return getattr(x,name)
+    return getattr(x, name)
+
 
 def icall(name, *ar, **kw):
     """A method for calling instance methods of an object by name or static
@@ -66,7 +55,7 @@ def icall(name, *ar, **kw):
         args = args[:-1]
 
         if isinstance(name, str):
-            f = getattr(x,name)
+            f = getattr(x, name)
         else:
             f = name
         cf = curry(f, *ar, **kw)
@@ -80,13 +69,13 @@ def dfassoc(df, key, val, *args):
     df = df.copy()
     df[key] = val
 
-    while(args):
+    while (args):
         key, val = args[:2]
         df[key] = val
         args = args[2:]
 
-
     return df
+
 
 ## Math stuff
 
@@ -105,7 +94,8 @@ def vdot(*arrs, l2r=True):
     else:
         return vdot(arrs[0], vdot(*arrs[1:]))
 
-def fftdiff(u, L = 4e7, axis=-1):
+
+def fftdiff(u, L=4e7, axis=-1):
     """
     Function for calculated the derivative of a periodic signal using fft.
 
@@ -114,8 +104,50 @@ def fftdiff(u, L = 4e7, axis=-1):
     from numpy.fft import fft, ifft, fftfreq
     nx = u.shape[axis]
     x = np.linspace(0, L, nx, endpoint=False)
-    k = fftfreq( nx, 1.0/nx )
+    k = fftfreq(nx, 1.0 / nx)
     fd = fft(u, axis=axis) * k * 1j * 2 * np.pi / L
-    ud = np.real( ifft(fd, axis=axis) )
+    ud = np.real(ifft(fd, axis=axis))
 
     return ud
+
+
+def phaseshift(x, time, arr, c=0, x_index=0, time_index=-1,
+               xmax=None):
+    """
+    Phase shift an array along a temporal axis
+
+
+    :param arr: array to shifted
+    :param x_index:  index of x-axis
+    :param time_index: index of time-axis
+    :keyword xmax: the maximum value of x
+    :return: phase shifted array
+
+    """
+    from scipy.interpolate import interp1d
+
+    out_arr = np.zeros_like(arr)
+
+    if xmax is None:
+        xmax = x[-1] + (x[1] - x[0])
+
+    time_index = time_index % arr.ndim
+    x_index = x_index % arr.ndim
+
+    subset_x_index = x_index - 1 if time_index < x_index else x_index
+
+    for t in range(arr.shape[time_index]):
+        sl = [slice(None)] * arr.ndim
+        sl[time_index] = t
+
+        sl1 = sl.copy()
+        sl1[x_index] = slice(0, 1)
+
+        subset = np.concatenate((arr[sl], arr[sl1]), subset_x_index)
+        xx = np.concatenate((x, [xmax, ]))
+
+        f = interp1d(xx, subset, axis=subset_x_index)
+
+        out_arr[sl] = f((x + c * time[t]) % xmax)
+
+    return out_arr
