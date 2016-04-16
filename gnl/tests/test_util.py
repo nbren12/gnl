@@ -1,8 +1,8 @@
-from gnl.util import phaseshift
+import numpy as np
+from gnl.util import phaseshift, linearf2matrix
 
 
 def test_phaseshift():
-    import numpy as np
 
     x = np.linspace(0, 1, 101)[:-1]
     t = np.linspace(0, 10, 101)
@@ -29,3 +29,22 @@ def test_phaseshift():
     # test for transpose
     u_phase_shifted = phaseshift(x, t, u.T, c=c, x_index=0, time_index=1)
     np.testing.assert_allclose(u_flat.T, u_phase_shifted, atol=1e-4)
+
+
+def test_linearf2matrix():
+    n, m  = 100, 200
+
+    R = np.random.rand(m, n)
+
+    def linearfunc(x):
+        y = np.zeros(m)
+
+        for i in range(0, y.shape[0]):
+            y[i] = R[i,:].dot(x)
+
+
+        return y
+
+
+    A = linearf2matrix(linearfunc, n)
+    np.testing.assert_allclose(A, R)

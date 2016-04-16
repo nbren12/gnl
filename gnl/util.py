@@ -143,6 +143,7 @@ def phaseshift(x, time, arr, c=0, x_index=0, time_index=-1,
         sl1 = sl.copy()
         sl1[x_index] = slice(0, 1)
 
+        # TODO: this array padding only works for linear or nn interpolation
         subset = np.concatenate((arr[sl], arr[sl1]), subset_x_index)
         xx = np.concatenate((x, [xmax, ]))
 
@@ -151,3 +152,19 @@ def phaseshift(x, time, arr, c=0, x_index=0, time_index=-1,
         out_arr[sl] = f((x + c * time[t]) % xmax)
 
     return out_arr
+
+def linearf2matrix(fun, n):
+    """
+    Convert linear function to a matrix of a given shape
+    :param fun:  linear function to be applied
+    :param n: size of input dimension
+    :return:
+    """
+
+    # Basis vectors
+    X = np.eye(n)
+
+    cols = [fun(X[i])[:, None] for i in range(n)]
+    return np.concatenate(cols, axis=1)
+
+
