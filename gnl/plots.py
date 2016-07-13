@@ -75,11 +75,12 @@ def test_loghist():
 
 def plot2d(x, y, z, ax=None, cmap='RdGy', norm=None, **kw):
     """ Plot dataset using NonUniformImage class
-    
-    Args:
-        x (nx,)
-        y (ny,)
-        z (nx,nz)
+
+    Parameters
+    ----------
+    x : (nx,)
+    y : (ny,)
+    z : (nx,nz)
         
     """
     from matplotlib.image import NonUniformImage
