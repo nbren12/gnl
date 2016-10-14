@@ -113,15 +113,29 @@ def fftdiff(u, L=4e7, axis=-1):
 
 def phaseshift(x, time, arr, c=0, x_index=0, time_index=-1,
                xmax=None):
-    """
-    Phase shift an array along a temporal axis
+    """Phase shift an array
+
+    This is useful for examining simulation output in the moving frame.
 
 
-    :param arr: array to shifted
-    :param x_index:  index of x-axis
-    :param time_index: index of time-axis
-    :keyword xmax: the maximum value of x
-    :return: phase shifted array
+    Parameters
+    ----------
+    x: (n,)
+       horizontal axis
+    time: (m,)
+       vertical axis
+    arr: (m, n)
+       datavalues on (x,t) grid
+    c: float
+       speed of wave to track
+
+    Returns
+    --------
+    phase shifted array
+
+    Notes
+    -----
+    Does not work for periodic data yet
 
     """
     from scipy.interpolate import interp1d
