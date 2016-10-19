@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
+from matplotlib.backends.backend_pdf import PdfPages
 
 article_style = {'axes.titlesize': 'medium', 'axes.labelsize': 'small'}
 
@@ -238,6 +239,8 @@ def plotiter(l,
     """Iterator for plots"""
     l = list(l)
     n = len(l)
+
+    ncol = min(n, ncol)
 
     nrow = np.ceil(n / ncol)
 
