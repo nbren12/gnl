@@ -1,3 +1,4 @@
+import string
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -235,8 +236,14 @@ def plotiter(l,
              w=1,
              aspect=1.0,
              tight_layout=True,
+             label_dict={},
              **kwargs):
     """Iterator for plots"""
+
+    # Label_dict defaults:
+    label_kwargs = dict(labeltype='alpha', loc=(-.05, 1.1))
+    label_kwargs.update(label_dict)
+
     l = list(l)
     n = len(l)
 
@@ -251,10 +258,19 @@ def plotiter(l,
 
     for i in range(n):
         ax = plt.axes(plt.subplot(nrow, ncol, i + 1))
+
+        if label_kwargs['labeltype'] == 'alpha':
+            label = string.ascii_uppercase[i]
+            args = label_kwargs['loc'] + (label,)
+
+            ax.text(*args, transform=ax.transAxes,
+                    fontdict=dict(weight='bold', size='x-large'))
+
         if yield_axis:
             yield l[i], ax
         else:
             yield l[i]
+    return
 
     if tight_layout:
         plt.tight_layout()
