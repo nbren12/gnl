@@ -62,3 +62,15 @@ def roll(z, **kwargs):
     out = z.copy()
     out.values= zout
     return out
+
+
+def remove_repeats(data, dim='time'):
+
+    dval = data.coords[dim].values
+
+    inds = []
+    for tval in np.sort(np.unique(dval)):
+        ival = (data[dim].values == tval).nonzero()[0][-1]
+        inds.append(ival)
+
+    return data[{dim: inds}]
