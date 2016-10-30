@@ -1,6 +1,25 @@
+import inspect
 import xarray as xr
 import numpy as np
+import scipy.ndimage
 from . import util
+
+def ndimage_wrapper(func):
+    """Wrap a subset of scipy.ndimage functions for easy use with xarray"""
+    def f(x, axes_kwargs, *args, dims=[], **kwargs):
+
+        # named axes args to list
+        axes_args = [axes_kwargs[k] for k in x.dims]
+        y = x.copy()
+
+        axes_args.extend(args)
+        y.values = func(x, axes_args, **kwargs)
+        y.attrs['edits'] = repr(func.__code__)
+
+        return y
+    f.__doc__ = func.__doc__
+
+    return f
 
 
 def xargs(z):
@@ -50,10 +69,11 @@ def phaseshift(u500, c=0):
 
 
 def roll(z, **kwargs):
-    Rotate datarray periodically
+    """Rotate datarray periodically
 
     Example
     ------
+    """
     roll(U, x=400)
     from scipy import ndimage
     sw = [kwargs[dim] if dim in kwargs else 0 for dim in z.dims]
@@ -75,6 +95,12 @@ def remove_repeats(data, dim='time'):
         inds.append(ival)
 
     return data[{dim: inds}]
+
+
+
+for func_name, func in inspect.getmembers(scipy.ndimage, inspect.isfunction):
+    setattr(xr.DataArray, func_name, ndimage_wrapper(func))
+
 
 
 # Add custom functions to DataArray class dynamically
