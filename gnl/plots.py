@@ -239,6 +239,8 @@ def plotiter(l,
              aspect=1.0,
              tight_layout=True,
              label_dict={},
+             sharex=False,
+             sharey=False,
              **kwargs):
     """Iterator for plots"""
 
@@ -259,7 +261,16 @@ def plotiter(l,
     plt.figure(figsize=figsize, **kwargs)
 
     for i in range(n):
-        ax = plt.axes(plt.subplot(nrow, ncol, i + 1))
+
+        subplot_kwargs = {}
+        if i > 0:
+            if sharex:
+                subplot_kwargs['sharex'] = ax
+            if sharey:
+                subplot_kwargs['sharey'] = ax
+
+
+        ax = plt.axes(plt.subplot(nrow, ncol, i + 1, **subplot_kwargs))
 
         if label_kwargs['labeltype'] == 'alpha':
             label = string.ascii_uppercase[i]
