@@ -1,3 +1,4 @@
+import functools
 import inspect
 import xarray as xr
 import numpy as np
@@ -6,6 +7,8 @@ from . import util
 
 def ndimage_wrapper(func):
     """Wrap a subset of scipy.ndimage functions for easy use with xarray"""
+
+    @functools.wraps(func)
     def f(x, axes_kwargs, *args, dims=[], **kwargs):
 
         # named axes args to list
@@ -17,7 +20,6 @@ def ndimage_wrapper(func):
         y.attrs['edits'] = repr(func.__code__)
 
         return y
-    f.__doc__ = func.__doc__
 
     return f
 
@@ -99,7 +101,7 @@ def remove_repeats(data, dim='time'):
 
 
 for func_name, func in inspect.getmembers(scipy.ndimage, inspect.isfunction):
-    setattr(xr.DataArray, func_name, ndimage_wrapper(func))
+    setattr(xr.DataArray, 'ndimage_'+func_name, ndimage_wrapper(func))
 
 
 
