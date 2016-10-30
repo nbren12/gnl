@@ -242,7 +242,28 @@ def plotiter(l,
              sharex=False,
              sharey=False,
              **kwargs):
-    """Iterator for plots"""
+    """Return a generator wrapping an iterator with matplotlib subplots
+
+    This function is used in a similar manner to seaborns FacetGrid class, but
+    is designed to work with standard python data structures.
+
+    Parameters
+    ----------
+    l: seq
+        An iterator whose which will be yielded
+    ncol: int, optional
+        The maximum number of columns
+    yield_axis: bool, optional
+        if True, a matplotlib axes object is also yielded
+
+    Yields
+    ------
+    obj:
+       an element of input iterator
+    ax: matplotlib.pyplot.axes, optional
+       axes object is returned if yield_axis=True
+
+    """
 
     # Label_dict defaults:
     label_kwargs = dict(labeltype='alpha', loc=(-.05, 1.1))
