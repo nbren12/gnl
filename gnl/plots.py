@@ -221,12 +221,14 @@ def labelled_bar(x, ax=None, pad=200, **kw):
 class LogP1(colors.Normalize):
     """Logarithmic norm for variables from [0, infty]"""
 
-    def __init__(self, base=10, **kwargs):
+    def __init__(self, data=None, base=10, **kwargs):
         colors.Normalize.__init__(self, **kwargs)
+        if data is not None:
+            base = np.percentile(data, 90) + 1
         self.base = base
 
     def __call__(self, value, clip=None):
-        return np.ma.masked_array(np.log(1 + value) / self.base)
+        return np.ma.masked_array(np.log(1 + value) / np.log(self.base))
 
 
 def plotiter(l,
@@ -270,7 +272,8 @@ def plotiter(l,
             yield l[i], ax
         else:
             yield l[i]
-    return
 
     if tight_layout:
         plt.tight_layout()
+
+    return

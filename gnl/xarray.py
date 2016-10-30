@@ -50,13 +50,11 @@ def phaseshift(u500, c=0):
 
 
 def roll(z, **kwargs):
-    """
     Rotate datarray periodically
 
     Example
     ------
     roll(U, x=400)
-    """
     from scipy import ndimage
     sw = [kwargs[dim] if dim in kwargs else 0 for dim in z.dims]
 
@@ -79,6 +77,7 @@ def remove_repeats(data, dim='time'):
     return data[{dim: inds}]
 
 
+# Add custom functions to DataArray class dynamically
 xr.DataArray.integrate = integrate
 xr.DataArray.roll = roll
 xr.DataArray.remove_repeats = remove_repeats
