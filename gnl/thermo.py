@@ -7,14 +7,14 @@ rd = 287.1
 cpd = 1004
 gr = 9.81
 kappa = rd / cpd
- 
+
 
 def hydrostatic_pressure_thz(th, z, ps=1000e2):
     """Hydrostatic pressure obtained by finite difference integration
-    
+
     Parameters
     ----------
-    th : 
+    th :
 		potential temperature (deg K)
 	z :
 		height values (meters)
@@ -24,7 +24,7 @@ def hydrostatic_pressure_thz(th, z, ps=1000e2):
 	Returns
 	-------
 	Hydrostatic pressure (Pa)
-    
+
     """
     p = np.zeros_like(z)
     p[0] = ps
