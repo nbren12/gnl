@@ -115,7 +115,7 @@ class XRReshaper(object):
     to_flat(dim): 
         return 2D numpy array where the second dimension is specified by dim
     from_flat(arr, old_dim, new_dim):
- s      returns a DataArray where old_dim is replaced by the new_dim
+        returns a DataArray where old_dim is replaced by the new_dim
 
     """
 
@@ -141,16 +141,43 @@ class XRReshaper(object):
 
         # reshape
         arr = arr.reshape(sh)
-
-        # make dim names
+            
+            
         dims = list(self._da.dims)
         dims.remove(old_dim)
         dims.append(new_dim)
+            
+        coords = {k: self._da[k] for k in dims if k in self._da}
 
-        coords = {k: self._da[k] for k in dims[:-1]}
-        coords[new_dim] = np.arange(arr.shape[1])
+        # make dim names
+        
+        if old_dim != new_dim:
+            coords[new_dim] = np.arange(arr.shape[-1])
 
         return xr.DataArray(arr, dims=dims, coords=coords)
+    
+    
+def test_XRReshaper():
+    
+    
+    sh = (100, 200, 300)
+    dims = ['x', 'y', 'z']
+    
+    coords= {}
+    for d,n  in zip(dims, sh):
+        coords[d] = np.arange(n)
+        
+    da = xr.DataArray(np.random.rand(*sh), dims=dims, coords=coords)
+   
+    rs= XRReshaper(da)
+
+    arr= rs.to_flat('z')
+
+    rss = rs.from_flat(arr,'z', 'z')
+    np.testing.assert_allclose(rss- da, 0)
+    
+    return 0
+
 
 # Add custom functions to DataArray class dynamically
 xr.DataArray.integrate = integrate
