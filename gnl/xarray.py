@@ -5,6 +5,7 @@ import numpy as np
 import scipy.ndimage
 from . import util
 
+
 def ndimage_wrapper(func):
     """Wrap a subset of scipy.ndimage functions for easy use with xarray"""
 
@@ -99,11 +100,57 @@ def remove_repeats(data, dim='time'):
     return data[{dim: inds}]
 
 
-
 for func_name, func in inspect.getmembers(scipy.ndimage, inspect.isfunction):
-    setattr(xr.DataArray, 'ndimage_'+func_name, ndimage_wrapper(func))
+    setattr(xr.DataArray, 'ndimage_' + func_name, ndimage_wrapper(func))
 
 
+class XRReshaper(object):
+    """An object for reshaping DataArrays into 2D matrices
+
+    This can be used to easily transform dataarrays into a format suitable for
+    input to scikit-learn functions.
+    
+    Methods
+    -------
+    to_flat(dim): 
+        return 2D numpy array where the second dimension is specified by dim
+    from_flat(arr, old_dim, new_dim):
+ s      returns a DataArray where old_dim is replaced by the new_dim
+
+    """
+
+    def __init__(self, da):
+        self._da = da
+
+    def to_flat(self, dim):
+
+        da = self._da
+        npa = np.rollaxis(da.values, da.get_axis_num(dim), da.ndim)
+
+        sh = npa.shape
+        npa = npa.reshape((-1, sh[-1]))
+
+        return npa
+
+    def from_flat(self, arr, old_dim='z', new_dim='m'):
+
+        # create new shape
+        sh = list(self._da.shape)
+        sh.pop(self._da.get_axis_num(old_dim))
+        sh.append(arr.shape[-1])
+
+        # reshape
+        arr = arr.reshape(sh)
+
+        # make dim names
+        dims = list(self._da.dims)
+        dims.remove(old_dim)
+        dims.append(new_dim)
+
+        coords = {k: self._da[k] for k in dims[:-1]}
+        coords[new_dim] = np.arange(arr.shape[1])
+
+        return xr.DataArray(arr, dims=dims, coords=coords)
 
 # Add custom functions to DataArray class dynamically
 xr.DataArray.integrate = integrate
