@@ -1,3 +1,12 @@
+"""A module containing useful patches to xarray
+
+Patch with scipy.ndimage
+========================
+
+Interfacing with scikits-learn
+==============================
+
+"""
 import functools
 import inspect
 import xarray as xr
@@ -58,12 +67,13 @@ def phaseshift(u500, c=0):
     phaseshift data into a travelling wave frame
     """
     # TODO: add arguments for x and time names
-    z = util.phaseshift(u500.x.values,
-                        u500.time.values,
-                        u500.values,
-                        c=c,
-                        x_index=-1,
-                        time_index=0)
+    z = util.phaseshift(
+        u500.x.values,
+        u500.time.values,
+        u500.values,
+        c=c,
+        x_index=-1,
+        time_index=0)
 
     out = u500.copy()
     out.values = z
@@ -109,10 +119,10 @@ class XRReshaper(object):
 
     This can be used to easily transform dataarrays into a format suitable for
     input to scikit-learn functions.
-    
+
     Methods
     -------
-    to_flat(dim): 
+    to_flat(dim):
         return 2D numpy array where the second dimension is specified by dim
     from_flat(arr, old_dim, new_dim):
         returns a DataArray where old_dim is replaced by the new_dim
@@ -141,41 +151,39 @@ class XRReshaper(object):
 
         # reshape
         arr = arr.reshape(sh)
-            
-            
+
         dims = list(self._da.dims)
         dims.remove(old_dim)
         dims.append(new_dim)
-            
+
         coords = {k: self._da[k] for k in dims if k in self._da}
 
         # make dim names
-        
+
         if old_dim != new_dim:
             coords[new_dim] = np.arange(arr.shape[-1])
 
         return xr.DataArray(arr, dims=dims, coords=coords)
-    
-    
+
+
 def test_XRReshaper():
-    
-    
+
     sh = (100, 200, 300)
     dims = ['x', 'y', 'z']
-    
-    coords= {}
-    for d,n  in zip(dims, sh):
+
+    coords = {}
+    for d, n in zip(dims, sh):
         coords[d] = np.arange(n)
-        
+
     da = xr.DataArray(np.random.rand(*sh), dims=dims, coords=coords)
-   
-    rs= XRReshaper(da)
 
-    arr= rs.to_flat('z')
+    rs = XRReshaper(da)
 
-    rss = rs.from_flat(arr,'z', 'z')
-    np.testing.assert_allclose(rss- da, 0)
-    
+    arr = rs.to_flat('z')
+
+    rss = rs.from_flat(arr, 'z', 'z')
+    np.testing.assert_allclose(rss - da, 0)
+
     return 0
 
 
