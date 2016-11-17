@@ -102,13 +102,18 @@ def fftdiff(u, L=4e7, axis=-1):
     L is the physical length of the signal (default = 4e7, m aroun earth)
     """
     from numpy.fft import fft, ifft, fftfreq
-    nx = u.shape[axis]
+
+    u = np.moveaxis(u, axis, -1)
+
+
+    nx = u.shape[-1]
     x = np.linspace(0, L, nx, endpoint=False)
     k = fftfreq(nx, 1.0 / nx)
-    fd = fft(u, axis=axis) * k * 1j * 2 * np.pi / L
-    ud = np.real(ifft(fd, axis=axis))
+    k.shape = [1]*(u.ndim-1) + [-1]
+    fd = fft(u, axis=-1) * k * 1j * 2 * np.pi / L
+    ud = np.real(ifft(fd, axis=-1))
 
-    return ud
+    return np.moveaxis(ud, -1, axis)
 
 
 def phaseshift(x, time, arr, c=0, x_index=0, time_index=-1,
