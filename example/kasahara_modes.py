@@ -365,7 +365,7 @@ def interpextrap(pcent, p, T0):
     return Tcent
 
 
-def main(sounding='wrf'):
+def main(sounding='toga'):
 
     # get grid for pressure
     pbound, pcent = pressure_grid()
