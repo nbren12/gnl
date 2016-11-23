@@ -14,6 +14,8 @@ except ImportError:
         print("numba not installed. Code will run extremely slowly.")
         return x
 
+from petsc4py import PETSc
+
 
 from contextlib import contextmanager
 from timeit import default_timer
@@ -109,6 +111,10 @@ def test_laplacian():
 
     p_ex = np.sin(x)*np.cos(2*y)/(-1 - 4)
 
+    print("Timing information")
+    print("==================")
+    print("")
+
 
     with elapsed_timer() as elapsed:
         p_ap = la.spsolve(A, f.ravel())
@@ -122,7 +128,6 @@ def test_laplacian():
         p_ap = la.gmres(A, f.ravel())
         print("gmres {0}".format(elapsed()))
 
-    
     pl.pcolormesh(p_cg.reshape(f.shape))
     pl.show()
 test_laplacian()
