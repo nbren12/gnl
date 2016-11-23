@@ -19,7 +19,7 @@ except ImportError:
         return x
 
 # Setup grid
-d = .01
+d = .001
 nx, ny = 100, 100
 Lx, Ly = nx * d, ny * d
 
@@ -93,33 +93,44 @@ def build_laplacian_matrix(nx, ny, g=g,d=d):
 
 
 
-A = build_laplacian_matrix(*x.shape)/d/d
+A = build_laplacian_matrix(nx, ny, d=d)
+I = ss.eye(nx*ny)
 
 
 def solve_lapl(v, A=A, g=g):
     vgn = v[g:-g,g:-g]
     vr = vgn.ravel()
+
+    # this step is sooo important
+    # takes care of gauge invariance
     vr[0] = 0.0
 
+
     out = np.zeros_like(v)
-    out[g:-g,g:-g] = la.spsolve(A, vr).reshape(vgn.shape)
+    out[g:-g,g:-g] = check_err(la.cg(A, vr)).reshape(vgn.shape)
 
     return out
 
-def f(vort,R=1/d/d/10.0):
+def check_err(res):
 
-    periodic_bc(vort, g=1, axes=(0,1))
-    psi = solve_lapl(vort)
+    out, err = res
+    if err != 0:
+        raise RuntimeError("Solver did not converge")
 
-    # arakawa scheme
-    periodic_bc(psi, g=1, axes=(0,1))
-    y = J(vort, psi)
+    return out
 
-    # explicit diffusion on grid scale
-    y += apply_lapl(vort)/R
+def solve_cc(v, beta, g=g):
+    vgn = v[g:-g,g:-g]
+    vr = vgn.ravel()
 
+    # this step is sooo important
+    # takes care of gauge invariance
+    vr[0] = 0.0
 
-    return y
+    out = np.zeros_like(v)
+    out[g:-g,g:-g] = check_err(la.cg(I-beta*A, vr)).reshape(vgn.shape)
+
+    return out
 
 def test_laplacian():
 
@@ -155,45 +166,59 @@ def test_laplacian():
     pl.colorbar()
 
     pl.subplot(212)
-    pl.pcolormesh(p_ap)
+    pl.pcolormesh((p_ap -p_ex)[g:-g,g:-g])
     pl.colorbar()
 
     pl.show()
     input()
 
-test_laplacian()
-import sys
-sys.exit()
+
+def f(vort,  g=g, dt=1.0):
+
+    periodic_bc(vort, g=g, axes=(0,1))
+    psi = solve_lapl(vort, g=g)
+
+    # arakawa scheme
+    periodic_bc(psi, g=g, axes=(0,1))
+    y = J(vort, psi)
+
+    # explicit diffusion on grid scale
+    # y += apply_lapl(vort)/R
+
+
+    return y
+
+
 # adams bashforth
 ab = [0]*3
 
-def onestep(vort, t, dt):
-    adv = f(vort)
+def onestep(vort, t, dt, R=1/d/d):
+    adv = f(vort, dt=dt)
     ab.append(adv); ab.pop(0)
     vort = vort + dt*(23/12*ab[-1] -4/3*ab[-2] + 5/12*ab[-3])
+
+    # (I - dt L)
+    vort = solve_cc(vort, dt/R)
     return vort
 
-vort = 10*(np.exp(-((y-Ly/2)/(Ly/100))**2) * (1 + np.sin(x)*.1))
-vort = 10*(np.exp(-((y-Ly/2)/(Ly/100))**2))
-# vort = np.random.randn(*x.shape)*4
+vort_strip = lambda y, y0, xw=20:  10*(np.exp(-((y-y0)/(Ly/xw))**2) * (1 + np.sin(2*pi*x/Lx)*.2))
+
+vort = vort_strip(y, Ly*2/3, xw=50)\
+       + -vort_strip(y, Ly*1/3,xw=50)
+
+# vort = 10*(np.exp(-((y-Ly/2)/(Ly/100))**2))
+# vort = np.random.randn(*x.shape)
 
 p = solve_lapl(vort, A=A, g=g)
 
 
 
 
-
 import pylab as pl
+
+dt = dx*2
+
 pl.ion()
-
-# pu, p = pressure_solve(uc)
-
-# ppu = pressure_solve(pu.copy())
-# np.testing.assert_almost_equal(pu, ppu)
-
-dt = dx/4
-
-
 pl.pcolormesh(vort)
 k = input()
 for i, ( t, v ) in enumerate(steps(onestep, vort, dt, [0.0, 10000 * dt])):

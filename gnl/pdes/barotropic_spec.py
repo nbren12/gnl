@@ -32,6 +32,13 @@ lapl[0,0] = 1.0
 # filter
 filter23 = (np.abs(k) < 2/3 * nx/2) * (np.abs(l) < 2/3 * ny/2)
 
+def lapl_solve(vort):
+
+    fv = fft2(vort)
+    psi = fv/lapl
+
+    return real(ifft2(psi))
+
 
 def f(vort, t, R=1/dx**2, k=k, l=l, lapl=lapl):
     fv = fft2(vort)
@@ -56,6 +63,8 @@ def onestep(vort, t, dt):
     return vort
 
 vort = 10*(np.exp(-((y-Ly/2)/(Ly/100))**2) * (1 + np.sin(x)*.1))
+psi = lapl_solve(vort)
+
 vort = np.random.randn(*x.shape)*4
 
 import pylab as pl
