@@ -20,7 +20,7 @@ except ImportError:
 
 # Setup grid
 d = .01
-nx, ny = 200, 200
+nx, ny = 100, 100
 Lx, Ly = nx * d, ny * d
 
 # ghost cell
@@ -76,29 +76,40 @@ def apply_lapl(vg, d=d):
     return correlate(vg, weights, origin=-1, mode='wrap')
 
 
-def build_laplacian_matrix(nx, ny):
+def build_laplacian_matrix(nx, ny, g=g,d=d):
     Lx = ss.diags([-2*np.ones(nx), np.ones(nx-1), np.ones(nx-1), 1.0, 1.0],
-                  [0, -1, 1, (nx-1),-(nx-1)])
+                  [0, -1, 1, nx-1, -(nx-1)])/d/d
 
     Ly = ss.diags([-2*np.ones(ny), np.ones(ny-1), np.ones(ny-1), 1.0, 1.0],
-                  [0, -1, 1, ny-1,-(ny-1)])
+                  [0, -1, 1, ny-1, -(ny-1)])/d/d
 
-    return ss.kronsum(Ly, Lx)
+
+    L =   ss.kronsum(Ly, Lx).tocsr()
+    I = ss.eye(nx*ny).tocsr()
+    L[0] = I[0]
+
+    return L
+
+
 
 
 A = build_laplacian_matrix(*x.shape)/d/d
 
-def invert_vort(v, d=d, g=g):
-    """Vorticity inversion
-    """
 
-    sh = v.shape
-    return la.spsolve(A, v.ravel()).reshape(sh)
+def solve_lapl(v, A=A, g=g):
+    vgn = v[g:-g,g:-g]
+    vr = vgn.ravel()
+    vr[0] = 0.0
 
-def f(vort,R=1/d/d):
+    out = np.zeros_like(v)
+    out[g:-g,g:-g] = la.spsolve(A, vr).reshape(vgn.shape)
+
+    return out
+
+def f(vort,R=1/d/d/10.0):
 
     periodic_bc(vort, g=1, axes=(0,1))
-    psi = invert_vort(vort)
+    psi = solve_lapl(vort)
 
     # arakawa scheme
     periodic_bc(psi, g=1, axes=(0,1))
@@ -110,36 +121,19 @@ def f(vort,R=1/d/d):
 
     return y
 
-
-# adams bashforth
-ab = [0]*3
-
-def onestep(vort, t, dt):
-    adv = f(vort)
-    ab.append(adv); ab.pop(0)
-    vort = vort + dt*(23/12*ab[-1] -4/3*ab[-2] + 5/12*ab[-3])
-    return vort
-
-vort = 10*(np.exp(-((y-Ly/2)/(Ly/100))**2) * (1 + np.sin(x)*.1))
-vort = np.random.randn(*x.shape)*4
-
-
-import pylab as pl
-pl.ion()
-
-
 def test_laplacian():
 
     import pylab as pl
     # Setup grid
-    nx, ny = 200, 200
+    nx, ny = 100, 200
     d = 2*pi/nx
     Lx, Ly = nx * d, ny * d
 
 
+    g = 2
     # make grid
-    x = np.arange(0, nx)*d
-    y = np.arange(0, ny)*d
+    x = np.arange(-g, nx+g)*d
+    y = np.arange(-g, ny+g)*d
 
     dx = x[1]-x[0]
     dy = y[1]-y[0]
@@ -147,14 +141,14 @@ def test_laplacian():
     x, y =  np.meshgrid(x, y, indexing='ij')
 
     # build laplacian
-    A = build_laplacian_matrix(*x.shape)/d/d
+    A = build_laplacian_matrix(nx,ny,d=d)
 
     # right hand side
     f = np.sin(x)*np.cos(2*y)
 
     p_ex = np.sin(x)*np.cos(2*y)/(-1 - 4)
 
-    p_ap = la.spsolve(A, f.ravel()).reshape(*f.shape)
+    p_ap = solve_lapl(f, A=A, g=g)
 
     pl.subplot(211)
     pl.pcolormesh(p_ex)
@@ -168,15 +162,36 @@ def test_laplacian():
     input()
 
 test_laplacian()
-    
+import sys
+sys.exit()
+# adams bashforth
+ab = [0]*3
 
+def onestep(vort, t, dt):
+    adv = f(vort)
+    ab.append(adv); ab.pop(0)
+    vort = vort + dt*(23/12*ab[-1] -4/3*ab[-2] + 5/12*ab[-3])
+    return vort
+
+vort = 10*(np.exp(-((y-Ly/2)/(Ly/100))**2) * (1 + np.sin(x)*.1))
+vort = 10*(np.exp(-((y-Ly/2)/(Ly/100))**2))
+# vort = np.random.randn(*x.shape)*4
+
+p = solve_lapl(vort, A=A, g=g)
+
+
+
+
+
+import pylab as pl
+pl.ion()
 
 # pu, p = pressure_solve(uc)
 
 # ppu = pressure_solve(pu.copy())
 # np.testing.assert_almost_equal(pu, ppu)
 
-dt = dx
+dt = dx/4
 
 
 pl.pcolormesh(vort)
