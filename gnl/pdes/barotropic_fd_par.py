@@ -33,14 +33,14 @@ def openlocal(da, global_vecs, yield_numpy=True):
     else:
         yield tuple(vec_arrays)
 
-    for g, l, v in zip(global_vecs, local_vecs, vec_arrays):
-        if da.comm.rank > 1:
-            da.localToGlobal(l, g)
-        else:
-            # localToGlobal does not work without parallelism
-            sw = da.stencil_width
-            idx = [slice(a+sw, b+sw) for a,b in da.ranges]
-            g[:] = v[idx]
+    # for g, l, v in zip(global_vecs, local_vecs, vec_arrays):
+    #     if da.comm.rank > 1:
+    #         da.localToGlobal(l, g)
+    #     else:
+    #         # localToGlobal does not work without parallelism
+    #         sw = da.stencil_width
+    #         idx = [slice(a+sw, b+sw) for a,b in da.ranges]
+    #         g[:] = v[idx]
 
 @contextmanager
 def openglobal(da, global_vecs, yield_numpy=True):
@@ -181,19 +181,21 @@ def J(v, p, jac):
                 + (p[i+1,j] - p[i,j-1]) *(v[i,j] - v[i+1,j-1]))
 
 
+def larray(g):
+    vl = da.createLocalVec()
+    da.globalToLocal(g, vl)
+
+    return da.getVecArray(vl)
+
 def f(vort, y):
 
     x = da.createGlobalVec()
 
     ksp.solve(vort, x)
-    vl = da.createLocalVec()
-    pl = vl.copy()
 
-    da.globalToLocal(vort, vl)
-    da.globalToLocal(x, pl)
+    v = larray(vort)[:]
+    p = larray(x)[:]
 
-    v = da.getVecArray(vl)[:]
-    p = da.getVecArray(pl)[:]
     yl = da.getVecArray(y)[:]
 
     J(v, p, yl)
@@ -241,8 +243,9 @@ with openglobal(da, [Xa, Ya, vort]) as (x, y, v):
 from functools import partial
 
 
-import pylab as pl
-pl.ion()
+if da.comm.rank == 0:
+    import pylab as pl
+    pl.ion()
 
 dt = d*2
 
@@ -251,6 +254,7 @@ R = 1/d/d
 
 # Pressure Solver
 A, ksp = getksp(h=1/d/d)
+
 
 # Diffusion backward euler
 B, kspd = getksp(I=1.0, h=-dt/d/d/R)
@@ -265,11 +269,12 @@ onestep=partial(onestep, solver=kspd)
 # pl.pcolormesh(da.getVecArray(out)[:]) ; pl.colorbar()
 
 # k = input()
-# sys.exit(0)
+print(da.comm.rank)
 for i, ( t, v ) in enumerate(steps(onestep, vort, dt, [0.0, 10000 * dt])):
-    print(t)
-    if i%100 == 0:
-        pl.clf()
-        pl.pcolormesh(da.getVecArray(v)[:])
-        pl.colorbar()
-        pl.pause(.01)
+    
+    if da.comm.rank == 0:
+        if i%100 == 0:
+            pl.clf()
+            pl.pcolormesh(da.getVecArray(v)[:])
+            pl.colorbar()
+            pl.pause(.01)
