@@ -6,6 +6,8 @@ from numpy import pi, real
 import numpy as np
 import scipy.sparse.linalg as la
 import scipy.sparse as ss
+from pyamg import ruge_stuben_solver
+from pyamg.gallery import poisson
 
 try:
     from numba import jit
@@ -30,7 +32,7 @@ def elapsed_timer():
 
 # Setup grid
 d = .01
-nx, ny = 100, 100
+nx, ny = 400, 400
 Lx, Ly = nx * d, ny * d
 
 # ghost cell
@@ -60,7 +62,7 @@ def build_laplacian_matrix(nx, ny, g=g,d=d):
     L[:,0] = 0.0
     L[0] = I[0]
 
-    return L
+    return L.tocsr()
 
 
 
@@ -88,7 +90,7 @@ def test_laplacian():
 
     import pylab as pl
     # Setup grid
-    nx, ny = 100, 200
+    nx, ny = 500, 500
     d = 2*pi/nx
     Lx, Ly = nx * d, ny * d
 
@@ -105,9 +107,11 @@ def test_laplacian():
 
     # build laplacian
     A = build_laplacian_matrix(nx,ny,d=d)
+    # A = poisson((nx, ny), spacing=(dx, dy), format='csr')/d/d
 
     # right hand side
     f = np.sin(x)*np.cos(2*y)
+    f = np.random.rand(A.shape[0])
 
     p_ex = np.sin(x)*np.cos(2*y)/(-1 - 4)
 
@@ -116,18 +120,24 @@ def test_laplacian():
     print("")
 
 
-    with elapsed_timer() as elapsed:
-        p_ap = la.spsolve(A, f.ravel())
-        print("spsolve {0}".format(elapsed()))
+    # with elapsed_timer() as elapsed:
+    #     p_ap = la.spsolve(A, f.ravel())
+    #     print("spsolve {0}".format(elapsed()))
 
     with elapsed_timer() as elapsed:
         p_cg = la.cg(A, f.ravel())[0]
         print("cg {0}".format(elapsed()))
 
-    with elapsed_timer() as elapsed:
-        p_ap = la.gmres(A, f.ravel())
-        print("gmres {0}".format(elapsed()))
+    # with elapsed_timer() as elapsed:
+    #     p_ap = la.gmres(A, f.ravel())
+    #     print("gmres {0}".format(elapsed()))
 
-    pl.pcolormesh(p_cg.reshape(f.shape))
+
+    ml = ruge_stuben_solver(A)
+    M = ml.aspreconditioner()
+    with elapsed_timer() as elapsed:
+        p_amg = la.cg(A, f.ravel(),M=M)
+        print("pyamg cg {0}".format(elapsed()))
+
     pl.show()
 test_laplacian()
