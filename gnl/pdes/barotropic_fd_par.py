@@ -101,10 +101,11 @@ class Poisson2D(object):
 
 OptDB = PETSc.Options()
 
+Ly = Lx = OptDB.getReal('Lx', 2.0)
 n  = OptDB.getInt('n', 150)
 nx = OptDB.getInt('nx', n)
 ny = OptDB.getInt('ny', n)
-d  = OptDB.getReal('d', .01/1.5)
+d  = Ly / n
 
 da = PETSc.DMDA().create([nx, ny], stencil_width=1, boundary_type=[3,3])
 
@@ -135,9 +136,6 @@ def getksp(ns=True, **kwargs):
 
 
 
-
-# Setup grid
-Lx, Ly = nx * d, ny * d
 
 # ghost cell
 g = 1
@@ -220,7 +218,7 @@ def onestep(vort, t, dt, solver=None):
     # vort = vort + dt * y
     return out
 
-vort_strip = lambda y, y0, xw=20:  10*(np.exp(-((y-y0)/(Ly/xw))**2) * (1 + np.sin(2*pi*x/Lx)*.2))
+vort_strip = lambda y, y0, xw=20:  10*(np.exp(-((y-y0)/(xw))**2) * (1 + np.sin(2*pi*x/Lx)*.2))
 
 
 # # vort = 10*(np.exp(-((y-Ly/2)/(Ly/100))**2))
@@ -231,8 +229,8 @@ vort_strip = lambda y, y0, xw=20:  10*(np.exp(-((y-y0)/(Ly/xw))**2) * (1 + np.si
 vort = da.createGlobalVec()
 
 with openglobal(da, [Xa, Ya, vort]) as (x, y, v):
-    v[:] = vort_strip(y, Ly*2/3, xw=50)\
-        + -vort_strip(y, Ly*1/3,xw=50)
+    v[:] = vort_strip(y, Ly*2/3, xw=3*d)\
+        + -vort_strip(y, Ly*1/3,xw=3*d)
 
     # v[:] = np.sin(x * 2 * pi /Lx) * np.cos(4*y * 2 * pi /Ly) * d*d
     # fac = (2*pi/Lx)**2 + (8*pi/Ly)**2
