@@ -12,7 +12,7 @@ import numpy as np
 import scipy.sparse.linalg as la
 import scipy.sparse as ss
 from scipy.ndimage import correlate
-from timestepping import steps
+from .timestepping import steps
 
 
 try:
@@ -120,7 +120,7 @@ OptDB = PETSc.Options()
 n  = OptDB.getInt('n', 100)
 nx = OptDB.getInt('nx', n)
 ny = OptDB.getInt('ny', n)
-d  = OptDB.getReal('d', .001)
+d  = OptDB.getReal('d', .01)
 
 da = PETSc.DMDA().create([nx, ny], stencil_width=1, boundary_type=[3, 1])
 

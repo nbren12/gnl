@@ -7,14 +7,13 @@ from .timestepping import steps
 from scipy.fftpack import fft2, ifft2, fftfreq
 
 # Setup grid
-nx, ny = 800, 200
-Lx, Ly = pi, pi/4
+dx, dy =  .01/1.5, .01/1.5
+nx, ny = 150, 150
+Lx, Ly = dx*nx, dy*ny
 
 x = np.arange(nx)/nx * Lx
 y = np.arange(ny)/ny * Ly
 
-dx = x[1]-x[0]
-dy = y[1]-y[0]
 
 x, y=  np.meshgrid(x, y, indexing='ij')
 
@@ -40,7 +39,7 @@ def lapl_solve(vort):
     return real(ifft2(psi))
 
 
-def f(vort, t, R=1/dx**2, k=k, l=l, lapl=lapl):
+def f(vort, t, R=1/dx**2/4, k=k, l=l, lapl=lapl):
     fv = fft2(vort)
     psi = fv/lapl
 
@@ -62,10 +61,14 @@ def onestep(vort, t, dt):
 
     return vort
 
-vort = 10*(np.exp(-((y-Ly/2)/(Ly/100))**2) * (1 + np.sin(x)*.1))
-psi = lapl_solve(vort)
 
-vort = np.random.randn(*x.shape)*4
+vort_strip = lambda y, y0, xw=20:  10*(np.exp(-((y-y0)/(Ly/xw))**2) * (1 + np.sin(2*pi*x/Lx)*.2))
+
+vort = vort_strip(y, Ly*2/3, xw=50)\
+       + -vort_strip(y, Ly*1/3,xw=50)
+
+
+# vort = np.random.randn(*x.shape)*4
 
 import pylab as pl
 pl.ion()
@@ -86,4 +89,5 @@ for i, ( t, v ) in enumerate(steps(onestep, vort, dt, [0.0, 10000 * dt])):
     if i%20 == 0:
         pl.clf()
         pl.pcolormesh(v)
+        pl.colorbar()
         pl.pause(.01)

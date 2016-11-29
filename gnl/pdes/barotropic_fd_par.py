@@ -8,7 +8,7 @@ import numpy as np
 import scipy.sparse.linalg as la
 import scipy.sparse as ss
 from scipy.ndimage import correlate
-from timestepping import steps
+from .timestepping import steps
 
 
 try:
@@ -101,10 +101,10 @@ class Poisson2D(object):
 
 OptDB = PETSc.Options()
 
-n  = OptDB.getInt('n', 100)
+n  = OptDB.getInt('n', 150)
 nx = OptDB.getInt('nx', n)
 ny = OptDB.getInt('ny', n)
-d  = OptDB.getReal('d', .001)
+d  = OptDB.getReal('d', .01/1.5)
 
 da = PETSc.DMDA().create([nx, ny], stencil_width=1, boundary_type=[3,3])
 
@@ -247,7 +247,7 @@ if da.comm.rank == 0:
     import pylab as pl
     pl.ion()
 
-dt = d*2
+dt = d/2
 
 R = 1/d/d
 
@@ -271,9 +271,8 @@ onestep=partial(onestep, solver=kspd)
 # k = input()
 print(da.comm.rank)
 for i, ( t, v ) in enumerate(steps(onestep, vort, dt, [0.0, 10000 * dt])):
-    
     if da.comm.rank == 0:
-        if i%100 == 0:
+        if i%20 == 0:
             pl.clf()
             pl.pcolormesh(da.getVecArray(v)[:])
             pl.colorbar()
