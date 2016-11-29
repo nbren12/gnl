@@ -2,20 +2,21 @@ import petsc4py
 from petsc4py import PETSc
 from itertools import product, starmap
 
-def poisson(da: PETSc.DM, spacing=None, a=0.0, b=1.0) -> PETSc.Mat:
+def poisson(da: PETSc.DM, spacing=None, a=0.0: float, b=1.0: float, A: PETSc.Mat = None) -> PETSc.Mat:
     """
     Return second order matrix for problem
 
-    a I + b L
+    a I + b div grad
 
     Note
     ----
     this implementation is pretty slow. Can it be speeded up with cython somehow
     """
-    A = da.createMatrix()
+    if A is None:
+        A = da.createMatrix()
 
     if spacing is None:
-        spacing = [1] * da.dim
+        spacing = [1.0] * da.dim
 
     # use stencil to set entries
     row = PETSc.Mat.Stencil()
@@ -46,9 +47,8 @@ if __name__ == '__main__':
                              stencil_width=1,
                              stencil_type='star',
                              boundary_type=['ghosted', 'ghosted'])
-
-    f =partial(poisson, da)
+    A = da.createMatrix()
+    f =partial(poisson, da, A=A)
 
     time = timeit.timeit(f, number=10)/10
     print(da.comm.rank, time)
-
