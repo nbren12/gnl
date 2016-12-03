@@ -14,7 +14,10 @@ import numpy as np
 from scipy.ndimage import correlate1d
 from numba import jit
 
-from .tadmor_common import periodic_bc
+try:
+    from ..bc import periodic_bc
+except:
+    from .tadmor_common import periodic_bc
 
 from .tadmor import _slopes, _stagger_avg, _corrector_step
 
