@@ -29,6 +29,7 @@ class PeriodicGeom(object):
     n_ghost = 4
     def fill_boundaries(self, uc):
         periodic_bc(uc, g=self.n_ghost, axes=(1,2))
+        return uc
 
     def validview(self, uc):
         g = self.n_ghost
@@ -46,13 +47,14 @@ class Tadmor2D(object):
         raise NotImplementedError
 
     def _single_step(self, uc, dx, dy, dt):
+        uc = self.geom.fill_boundaries(uc)
+
         ux = np.zeros_like(uc)
         uy = np.zeros_like(uc)
         uc = uc.copy()
         lmd_x = dt / dx
         lmd_y = dt / dy
 
-        self.geom.fill_boundaries(uc)
         ustag = _stagger_avg(uc)
 
         # predictor: mid-time-step pointewise values at cell-center
