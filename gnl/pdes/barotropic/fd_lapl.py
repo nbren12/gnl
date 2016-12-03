@@ -13,7 +13,9 @@ from petsc4py import PETSc
 from gnl.pdes.barotropic.barotropic import BarotropicSolver
 from gnl.pdes.tadmor.tadmor_2d import MultiFab
 from gnl.pdes.grid import ghosted_grid
+from gnl.pdes.gallery import poisson
 from gnl.timestepping import steps
+
 
 class BarotropicSolverFD(BarotropicSolver):
     pass
@@ -56,12 +58,15 @@ class PETScFab(MultiFab):
     def g(self):
         return self.da.getVecArray(self._gvec)
 
-    def swap(self):
+    def scatter(self):
         self.da.globalToLocal(self._gvec, self._lvec)
 
-    def exchange(self):
+    def gather(self):
         self.g[:] = self.validview.swapaxes(0, -1)
-        self.swap()
+
+    def exchange(self):
+        self.gather()
+        self.scatter()
 
 def test_fab():
     # Setup grid
@@ -77,7 +82,7 @@ def test_fab():
 
 
     uc.g[:] = np.r_[0:nx]
-    uc.swap()
+    uc.scatter()
 
     # uc.exchange()
     assert uc.validview.shape == (10,)
@@ -85,6 +90,87 @@ def test_fab():
 
     np.testing.assert_allclose(uc.validview, np.arange(nx))
 
+
+class Poisson(object):
+    """PETSc Poisson solver
+
+    Operates on PETSc FABs
+
+    Attributes
+    ----------
+    Mat
+    KSP
+    da
+    """
+
+    def __init__(self, a, b, da, spacing):
+        "docstring"
+        self.a = a
+        self.b = b
+        self.da = da
+
+        # get matrix
+        self.mat = poisson(da, spacing, a, b)
+
+        # constant null space
+        ns = PETSc.NullSpace().create(constant=True)
+        self.mat.setNullSpace(ns)
+
+
+        # make solver
+        ksp = PETSc.KSP().create()
+        ksp.setOperators(self.mat)
+        ksp.setType('cg')
+        pc = ksp.getPC()
+        pc.setType('none')
+        ksp.setFromOptions()
+        self.ksp = ksp
+
+    def solve(self, b: MultiFab, x: MultiFab):
+        """
+        """
+        b.gather()
+        x.gather()
+
+        self.ksp.solve(b._gvec, x._gvec)
+
+
+def test_solver(plot=False):
+    nx, ny = 500, 500
+    Lx, Ly = 2*pi, 2*pi
+
+    (x,y), (dx,dy) = ghosted_grid([nx, ny], [Lx, Ly], 0)
+
+    PER = PETSc.DM.BoundaryType.PERIODIC
+
+    da = PETSc.DMDA().create(sizes=[nx, ny], dof=1, stencil_width=1,
+                             boundary_type=[PER, PER], stencil_type='star')
+    soln = PETScFab(da)
+    rhs = PETScFab(da)
+
+    rhs.g[:] = np.sin(3*x) * np.cos(2*y)
+    rhs.scatter()
+
+    p_ex = rhs.g[:] / (-9 - 4)
+
+    poisson  = Poisson(0.0, 1.0, da, [dx, dy])
+    poisson.solve(rhs,soln)
+
+
+    if plot:
+        import pylab as pl
+        pl.subplot(131)
+        pl.pcolormesh(p_ex)
+        pl.colorbar()
+        pl.subplot(132)
+        pl.pcolormesh(soln.g[:])
+        pl.colorbar()
+        pl.subplot(133)
+        pl.pcolormesh(soln.g[:]-p_ex)
+        pl.colorbar()
+        pl.show()
+
+    np.testing.assert_allclose(soln.g[:], p_ex, atol=dx**2)
 
 def main(plot=True):
 
@@ -99,8 +185,12 @@ def main(plot=True):
 
     da = PETSc.DMDA().create(sizes=[nx, ny], dof=3, stencil_width=g,
                              boundary_type=[PER, PER])
-    da_scalar = PETSc.DMDA().create(sizes=[nx, ny], dof=1, stencil_width=g)
-
+    da_scalar = da.duplicate(dof=1,
+                             stencil_width=1,
+                             stencil_type='star',
+                             boundary_type=[PER, PER])
+    pressure = PETScFab(da_scalar)
+    poisson  = Poisson(0.0, 1.0, da_scalar, [dx, dy])
 
 
     uc = PETScFab(da)
@@ -139,5 +229,6 @@ if __name__ == '__main__':
     import sys
     petsc4py.init(sys.argv)
     # main(plot=False)
-    main(plot=True)
+    # main(plot=True)
+    test_solver(plot=True)
     # test_fab()

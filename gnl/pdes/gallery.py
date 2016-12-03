@@ -2,7 +2,8 @@ import petsc4py
 from petsc4py import PETSc
 from itertools import product, starmap
 
-def poisson(da: PETSc.DM, spacing=None, a=0.0: float, b=1.0: float, A: PETSc.Mat = None) -> PETSc.Mat:
+def poisson(da: PETSc.DM, spacing=None, a=0.0, b=1.0, A: PETSc.Mat = None,
+            bcs=None) -> PETSc.Mat:
     """
     Return second order matrix for problem
 
@@ -18,13 +19,18 @@ def poisson(da: PETSc.DM, spacing=None, a=0.0: float, b=1.0: float, A: PETSc.Mat
     if spacing is None:
         spacing = [1.0] * da.dim
 
+    if bcs is None:
+        bcs = [0]*da.dim
+
     # use stencil to set entries
     row = PETSc.Mat.Stencil()
     col = PETSc.Mat.Stencil()
     if da.dim == 2:
+        ir = range(*da.ranges[0])
+        jr = range(*da.ranges[1])
 
         dx, dy = spacing
-        for i, j in product(*starmap(range,da.ranges)):
+        for i, j in product(ir, jr):
             row.index = (i,j)
 
             for index, value in [((i, j), a + b * (-2/dx**2 - 2 /dy**2)),
@@ -38,6 +44,8 @@ def poisson(da: PETSc.DM, spacing=None, a=0.0: float, b=1.0: float, A: PETSc.Mat
     A.assemblyBegin()
     A.assemblyEnd()
 
+    return A
+
 
 
 if __name__ == '__main__':
@@ -46,7 +54,7 @@ if __name__ == '__main__':
     da = PETSc.DMDA().create(sizes=[300, 300],
                              stencil_width=1,
                              stencil_type='star',
-                             boundary_type=['ghosted', 'ghosted'])
+                             boundary_type=['periodic', 'periodic'])
     A = da.createMatrix()
     f =partial(poisson, da, A=A)
 
