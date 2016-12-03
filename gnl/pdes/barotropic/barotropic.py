@@ -27,6 +27,29 @@ from gnl.pdes.timestepping import steps
 from gnl.pdes.grid import ghosted_grid
 
 
+def _solve_laplace(uv, dx, dy):
+    nx, ny = uv.shape[1:]
+
+    u = uv[0]
+    v = uv[1]
+
+    fu = fft2(u)
+    fv = fft2(v)
+
+    scal_y = 2 * pi / dy / ny
+    scal_x = 2 * pi / dx / nx
+
+    k = fftfreq(nx, 1 / nx)[:, None] * 1j * scal_x
+    l = fftfreq(ny, 1 / ny)[None, :] * 1j * scal_y
+
+    lapl = k**2 + l**2
+    lapl[0, 0] = 1.0
+
+    p = (fu * k + fv * l) / lapl
+
+    u[:] -= real(ifft2(p * k))
+    v[:] -= real(ifft2(p * l))
+
 # initialize state
 class State(object):
     def comm():
@@ -66,41 +89,24 @@ class BarotropicSolver(Tadmor2D):
         return f
 
     def advection_step(self, uc, dt):
-        return self.central_scheme(uc, self.geom.dx, self.geom.dy, dt)
+        self.central_scheme(uc, self.geom.dx, self.geom.dy, dt)
 
     def pressure_solve(self, uc):
 
-        uv = self.geom.validview(uc)
         dx = self.geom.dx
         dy = self.geom.dy
 
-        nx, ny = uv.shape[1:]
+        try:
+            uv = uc.validview
+        except:
+            uv = self.geom.validview(uc)
 
-        u = uv[0]
-        v = uv[1]
+        _solve_laplace(uv, dx, dy)
 
-        fu = fft2(u)
-        fv = fft2(v)
-
-        scal_y = 2 * pi / dy / ny
-        scal_x = 2 * pi / dx / nx
-
-        k = fftfreq(nx, 1 / nx)[:, None] * 1j * scal_x
-        l = fftfreq(ny, 1 / ny)[None, :] * 1j * scal_y
-
-        lapl = k**2 + l**2
-        lapl[0, 0] = 1.0
-
-        p = (fu * k + fv * l) / lapl
-
-        u[:] -= real(ifft2(p * k))
-        v[:] -= real(ifft2(p * l))
-
-        return uc, real(ifft2(p))
 
     def onestep(self, uc, t, dt):
-        uc = self.advection_step(uc, dt / 2)
-        uc, p = self.pressure_solve(uc)
+        self.advection_step(uc, dt)
+        self.pressure_solve(uc)
 
         return uc
 

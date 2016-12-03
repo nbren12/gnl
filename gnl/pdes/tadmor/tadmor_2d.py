@@ -95,29 +95,34 @@ class Tadmor2DBase(object):
         out: (neq, n)
         state vector on centered grid
         """
-        return _stagger_avg(_roll2d(self._single_step(uc, dx, dy, dt)))
+        
+        uc[:] =  _stagger_avg(_roll2d(self._single_step(uc, dx, dy, dt)))
+        return uc
 
 
 class Geom(object):
     """This class is provided for compatibility"""
 
     def validview(self, uc):
-        return MultiFab(uc, self.n_ghost).validview
+        if isinstance(uc, MultiFab):
+            return uc.validview
+        else:
+            return MultiFab(uc, self.n_ghost).validview
 
 
 class Tadmor2D(Tadmor2DBase):
     """This class is provided for compatibility"""
     geom = Geom()
 
-    def _single_step(self, vec, dx, dy, dt):
+    def central_scheme(self, vec, dx, dy, dt):
         if isinstance(vec, MultiFab):
             vec.exchange()
             uc = vec.ghostview
-            uc[:] =  super(Tadmor2D, self)._single_step(uc, dx, dy, dt)
+            uc[:] =  super(Tadmor2D, self).central_scheme(uc, dx, dy, dt)
             return vec
         else:
             fab = MultiFab(vec, self.geom.n_ghost)
             fab.exchange()
             uc = fab.ghostview
-            return super(Tadmor2D, self)._single_step(uc, dx, dy, dt)
+            return super(Tadmor2D, self).central_scheme(uc, dx, dy, dt)
 
