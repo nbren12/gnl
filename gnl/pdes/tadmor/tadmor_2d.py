@@ -25,21 +25,27 @@ from .tadmor import _slopes, _stagger_avg, _corrector_step
 def _roll2d(u):
     return np.roll(np.roll(u, -1, axis=1), -1, axis=2)
 
-class PeriodicGeom(object):
-    n_ghost = 4
-    def fill_boundaries(self, uc):
-        periodic_bc(uc, g=self.n_ghost, axes=(1,2))
-        return uc
 
-    def validview(self, uc):
+class MultiFab(object):
+    def __init__(self, data, n_ghost):
+        "docstring"
+        self.data = data
+        self.n_ghost = n_ghost
+
+    def exchange(self):
+        periodic_bc(self.data, g=self.n_ghost, axes=(1, 2))
+
+    @property
+    def validview(self):
         g = self.n_ghost
-        return uc[:, g:-g, g:-g]
+        return self.data[:, g:-g, g:-g]
+
+    @property
+    def ghostview(self):
+        return self.data
 
 
-class Tadmor2D(object):
-
-    geom = PeriodicGeom()
-
+class Tadmor2DBase(object):
     def fx(self, uc):
         raise NotImplementedError
 
@@ -47,7 +53,6 @@ class Tadmor2D(object):
         raise NotImplementedError
 
     def _single_step(self, uc, dx, dy, dt):
-        uc = self.geom.fill_boundaries(uc)
 
         ux = np.zeros_like(uc)
         uy = np.zeros_like(uc)
@@ -61,7 +66,7 @@ class Tadmor2D(object):
         # Eq. (1.1) in Jiand and Tadmor
         ux = _slopes(self.fx(uc), axis=1)
         uy = _slopes(self.fy(uc), axis=2)
-        uc -= lmd_x / 2 *ux   + lmd_y/2 * uy
+        uc -= lmd_x / 2 * ux + lmd_y / 2 * uy
 
         # corrector
         # Eq (1.2) in Jiang and Tadmor
@@ -94,3 +99,28 @@ class Tadmor2D(object):
         uc = self._single_step(ustag, dx, dy, dt / 2)
 
         return uc
+
+
+class Geom(object):
+    """This class is provided for compatibility"""
+
+    def validview(self, uc):
+        return MultiFab(uc, self.n_ghost).validview
+
+
+class Tadmor2D(Tadmor2DBase):
+    """This class is provided for compatibility"""
+    geom = Geom()
+
+    def _single_step(self, vec, dx, dy, dt):
+        if isinstance(vec, MultiFab):
+            vec.exchange()
+            uc = vec.ghostview
+            uc[:] =  super(Tadmor2D, self)._single_step(uc, dx, dy, dt)
+            return vec
+        else:
+            fab = MultiFab(vec, self.geom.n_ghost)
+            fab.exchange()
+            uc = fab.ghostview
+            return super(Tadmor2D, self)._single_step(uc, dx, dy, dt)
+

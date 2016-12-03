@@ -123,6 +123,7 @@ def main(plot=True):
     tad = BarotropicSolver()
     tad.geom.dx = dx
     tad.geom.dy = dx
+    tad.geom.n_ghost = g
 
     uc = state.uc
 
