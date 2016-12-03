@@ -95,10 +95,7 @@ class Tadmor2DBase(object):
         out: (neq, n)
         state vector on centered grid
         """
-        ustag = _roll2d(self._single_step(uc, dx, dy, dt / 2))
-        uc = self._single_step(ustag, dx, dy, dt / 2)
-
-        return uc
+        return _stagger_avg(_roll2d(self._single_step(uc, dx, dy, dt)))
 
 
 class Geom(object):
