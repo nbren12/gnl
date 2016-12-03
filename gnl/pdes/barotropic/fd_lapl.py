@@ -7,7 +7,8 @@
 from math import pi
 import numpy as np
 
-import petsc4py
+import petsc4py, sys
+petsc4py.init(sys.argv)
 from petsc4py import PETSc
 
 from gnl.pdes.barotropic.barotropic import BarotropicSolver
@@ -110,6 +111,7 @@ class Poisson(object):
         self.da = da
 
         # get matrix
+        self.spacing = spacing
         self.mat = poisson(da, spacing, a, b)
 
         # constant null space
@@ -131,12 +133,13 @@ class Poisson(object):
         """
         b.gather()
         x.gather()
+        b._gvec *= self.spacing[0]*self.spacing[1]
 
         self.ksp.solve(b._gvec, x._gvec)
 
 
 def test_solver(plot=False):
-    nx, ny = 500, 500
+    nx, ny = 500, 300
     Lx, Ly = 2*pi, 2*pi
 
     (x,y), (dx,dy) = ghosted_grid([nx, ny], [Lx, Ly], 0)
@@ -226,9 +229,7 @@ def main(plot=True):
                 pl.colorbar()
                 pl.pause(.01)
 if __name__ == '__main__':
-    import sys
-    petsc4py.init(sys.argv)
     # main(plot=False)
     # main(plot=True)
-    test_solver(plot=True)
+    test_solver(plot=False)
     # test_fab()

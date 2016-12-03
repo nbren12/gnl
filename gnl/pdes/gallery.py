@@ -25,7 +25,13 @@ def poisson(da: PETSc.DM, spacing=None, a=0.0, b=1.0, A: PETSc.Mat = None,
     # use stencil to set entries
     row = PETSc.Mat.Stencil()
     col = PETSc.Mat.Stencil()
+
+
     if da.dim == 2:
+        dx, dy = spacing
+
+        hxy = dx/dy
+        hyx = dy/dx
         ir = range(*da.ranges[0])
         jr = range(*da.ranges[1])
 
@@ -33,11 +39,11 @@ def poisson(da: PETSc.DM, spacing=None, a=0.0, b=1.0, A: PETSc.Mat = None,
         for i, j in product(ir, jr):
             row.index = (i,j)
 
-            for index, value in [((i, j), a + b * (-2/dx**2 - 2 /dy**2)),
-                                 ((i-1, j), b/dx**2),
-                                 ((i+1, j), b/dx**2),
-                                 ((i, j-1), b/dy**2),
-                                 ((i, j+1), b/dy**2)]:
+            for index, value in [((i, j), a + b * (-2 * hyx - 2 *hxy)),
+                                 ((i-1, j), b * hyx),
+                                 ((i+1, j), b * hyx),
+                                 ((i, j-1), b*hxy),
+                                 ((i, j+1), b*hxy)]:
                 col.index = index
                 A.setValueStencil(row, col, value)
 
