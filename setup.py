@@ -4,13 +4,18 @@ from distutils.extension import Extension
 from Cython.Distutils import build_ext
 import numpy as np                           # <---- New line
 
-_I = ['gnl']
 
 ext_modules = [Extension("gnl.gslrand",
     sources = ["gnl/gslrand.pyx"],
     libraries = ['gsl', 'gslcblas'],
     include_dirs = ["gnl"] # This line is crucial
-    )]
+    ),
+    Extension("gnl.pdes.tadmor.tadmor",
+    sources = ["gnl/pdes/tadmor/tadmor.pyx"],
+    libraries = [],
+    include_dirs = [np.get_include()] # This line is crucial
+    ),
+    ]
 
 setup(
     name = 'gnl',
