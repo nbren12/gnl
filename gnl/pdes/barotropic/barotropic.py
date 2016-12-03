@@ -108,7 +108,7 @@ def main(plot=True):
 
     # Setup grid
     g = 4
-    nx, ny = 100, 100
+    nx, ny = 200, 200
     Lx, Ly = pi, pi
 
     (x,y), (dx,dy) = ghosted_grid([nx, ny], [Lx, Ly], g)
@@ -141,7 +141,7 @@ def main(plot=True):
         if i % 100 == 0:
             if plot:
                 pl.clf()
-                pl.pcolormesh(uc[0])
+                pl.pcolormesh(tad.geom.validview(uc)[0])
                 pl.colorbar()
                 pl.pause(.01)
 
