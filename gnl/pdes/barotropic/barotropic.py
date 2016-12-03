@@ -5,8 +5,8 @@ u_x + v_y = 0
 """
 from numpy import pi, real
 import numpy as np
-from ..tadmor.tadmor_2d import Tadmor2D
-from ..swe.timestepping import steps
+from gnl.pdes.tadmor.tadmor_2d import Tadmor2D
+from gnl.pdes.timestepping import steps
 import logging
 logging.basicConfig(level=logging.INFO)
 try:
@@ -77,7 +77,7 @@ def fy(uc):
 
 def comm(uc):
     """doubly periodic for now"""
-    from .tadmor.tadmor_common import periodic_bc
+    from gnl.pdes.bc import periodic_bc
 
     return periodic_bc(uc, g=2, axes=(1,2))
 

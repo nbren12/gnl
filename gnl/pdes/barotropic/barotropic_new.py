@@ -7,8 +7,8 @@ this method is extremely dissipative
 """
 from numpy import pi, real
 import numpy as np
-from ..tadmor.tadmor_2d import Tadmor2D
-from ..swe.timestepping import steps
+from gnl.pdes.tadmor.tadmor_2d import Tadmor2D
+from gnl.pdes.timestepping import steps
 from scipy.fftpack import fft2, ifft2, fftfreq
 
 # Setup gridcython -a yourmod.pyx
@@ -66,15 +66,9 @@ def fx(uc):
     return f
 
 
-def comm(uc):
-    """doubly periodic for now"""
-    from .tadmor.tadmor_common import periodic_bc
-
-    return periodic_bc(uc, g=2, axes=(1,2))
 
 
 tad = Tadmor2D()
-tad.comm = comm
 tad.fx =fx
 tad.fy =fy
 

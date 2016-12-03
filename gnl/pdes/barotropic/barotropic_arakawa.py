@@ -7,8 +7,8 @@ import numpy as np
 import scipy.sparse.linalg as la
 import scipy.sparse as ss
 from scipy.ndimage import correlate
-from .timestepping import steps
-from .bc import periodic_bc
+from gnl.pdes.timestepping import steps
+from gnl.pdes.bc import periodic_bc
 
 
 try:

@@ -1,9 +1,5 @@
 """Barotropic 2d dynamics using finite difference scheme from Arakawa (1966)
 
-
-This uses no-normal flow conditions at the y-boundaries.
-This implemented by using dirichlet boundary conditions there.
-
 """
 from itertools import product
 from contextlib import contextmanager
@@ -12,7 +8,7 @@ import numpy as np
 import scipy.sparse.linalg as la
 import scipy.sparse as ss
 from scipy.ndimage import correlate
-from .timestepping import steps
+from gnl.pdes.timestepping import steps
 
 
 try:
@@ -21,6 +17,30 @@ except ImportError:
     def jit(x):
         print("numba not installed. Code will run extremely slowly.")
         return x
+
+
+@contextmanager
+def openlocal(da, global_vecs, yield_numpy=True):
+    local_vecs = [da.createLocalVec()]*len(global_vecs)
+
+    for g, l in zip(global_vecs, local_vecs):
+        da.globalToLocal(g, l)
+
+    vec_arrays = [da.getVecArray(l) for l in local_vecs]
+
+    if yield_numpy:
+        yield tuple(v[:] for v in vec_arrays)
+    else:
+        yield tuple(vec_arrays)
+
+    # for g, l, v in zip(global_vecs, local_vecs, vec_arrays):
+    #     if da.comm.rank > 1:
+    #         da.localToGlobal(l, g)
+    #     else:
+    #         # localToGlobal does not work without parallelism
+    #         sw = da.stencil_width
+    #         idx = [slice(a+sw, b+sw) for a,b in da.ranges]
+    #         g[:] = v[idx]
 
 @contextmanager
 def openglobal(da, global_vecs, yield_numpy=True):
@@ -37,7 +57,6 @@ import sys, petsc4py
 petsc4py.init(sys.argv)
 
 from petsc4py import PETSc
-
 @jit
 def _kernel(x, y, h=1, I=0):
         nx,ny = x.shape
@@ -53,32 +72,7 @@ def _kernel(x, y, h=1, I=0):
                 u_yy = (u_n - 2*u + u_s)
                 y[i-1, j-1] = I * u + h*(u_xx + u_yy)
 
-def neumann_bc(da, l):
-    ys, ye = da.ranges[1]
 
-    va = da.getVecArray(l)
-
-    ny = da.sizes[1]
-
-    if ys == 0:
-        va[:,-1] = va[:, 0]
-
-    if ye == ny:
-        va[:,ny] = va[:, ny-1]
-
-
-def dir_bc(da, l):
-    ys, ye = da.ranges[1]
-
-    va = da.getVecArray(l)
-
-    ny = da.sizes[1]
-
-    if ys == 0:
-        va[:,-1] = -va[:, 0]
-
-    if ye == ny:
-        va[:,ny] = -va[:, ny-1]
 
 class Poisson2D(object):
 
@@ -92,37 +86,28 @@ class Poisson2D(object):
 
 
     def mult(self, mat, X, Y):
-
-
-
+        #
         self.da.globalToLocal(X, self.localX)
 
         x = self.da.getVecArray(self.localX)[:]
         y = self.da.getVecArray(Y)[:]
-
-        # neumann boundary conditions
-        ys, ye = da.ranges[1]
-
-        ny = da.sizes[1]
-
-        if ys == 0:
-            x[:,0] = -x[:, 1]
-
-        if ye == ny:
-            x[:,-1] = -x[:, -2]
-
+        #
+        mx, my = self.da.getSizes()
+        hx, hy = [1.0/m for m in [mx, my]]
+        (xs, xe), (ys, ye) = self.da.getRanges()
 
         _kernel(x, y, I=self.I, h=self.h)
 
 
 OptDB = PETSc.Options()
 
-n  = OptDB.getInt('n', 100)
+Ly = Lx = OptDB.getReal('Lx', 2.0)
+n  = OptDB.getInt('n', 150)
 nx = OptDB.getInt('nx', n)
 ny = OptDB.getInt('ny', n)
-d  = OptDB.getReal('d', .01)
+d  = Ly / n
 
-da = PETSc.DMDA().create([nx, ny], stencil_width=1, boundary_type=[3, 1])
+da = PETSc.DMDA().create([nx, ny], stencil_width=1, boundary_type=[3,3])
 
 def getksp(ns=True, **kwargs):
     pde = Poisson2D(da, **kwargs)
@@ -151,9 +136,6 @@ def getksp(ns=True, **kwargs):
 
 
 
-
-# Setup grid
-Lx, Ly = nx * d, ny * d
 
 # ghost cell
 g = 1
@@ -197,11 +179,9 @@ def J(v, p, jac):
                 + (p[i+1,j] - p[i,j-1]) *(v[i,j] - v[i+1,j-1]))
 
 
-def larray(g, bc=neumann_bc):
+def larray(g):
     vl = da.createLocalVec()
     da.globalToLocal(g, vl)
-
-    bc(da, vl)
 
     return da.getVecArray(vl)
 
@@ -211,21 +191,22 @@ def f(vort, y):
 
     ksp.solve(vort, x)
 
-    v = larray(vort, bc=neumann_bc)[:]
-    p = larray(x, bc=dir_bc)[:]
+    v = larray(vort)[:]
+    p = larray(x)[:]
 
     yl = da.getVecArray(y)[:]
 
     J(v, p, yl)
 
+
 # adams bashforth
 ab = [da.createGlobalVec() for i in range(3)]
 
 def onestep(vort, t, dt, solver=None):
-    tend = ab.pop(0)
-    f(vort, tend)
+    y = ab.pop(0)
+    f(vort, y)
 
-    ab.append(tend)
+    ab.append(y)
 
     vort = vort + dt*(23/12*ab[-1] -4/3*ab[-2] + 5/12*ab[-3])
     # vort = vort + dt*(23/12*ab[-1] -4/3*ab[-2] + 5/12*ab[-3])
@@ -237,7 +218,7 @@ def onestep(vort, t, dt, solver=None):
     # vort = vort + dt * y
     return out
 
-vort_strip = lambda y, y0, xw=20:  10*(np.exp(-((y-y0)/(Ly/xw))**2) * (1 + np.sin(2*pi*x/Lx)*.2))
+vort_strip = lambda y, y0, xw=20:  10*(np.exp(-((y-y0)/(xw))**2) * (1 + np.sin(2*pi*x/Lx)*.2))
 
 
 # # vort = 10*(np.exp(-((y-Ly/2)/(Ly/100))**2))
@@ -248,13 +229,8 @@ vort_strip = lambda y, y0, xw=20:  10*(np.exp(-((y-y0)/(Ly/xw))**2) * (1 + np.si
 vort = da.createGlobalVec()
 
 with openglobal(da, [Xa, Ya, vort]) as (x, y, v):
-    v[:] = vort_strip(y, Ly*2/3, xw=50)\
-        + -vort_strip(y, Ly*1/3,xw=50)
-
-    # v[:] = vort_strip(y, Ly*1/2, xw=50)
-    v[:] = np.random.randn(*x.shape)*3 * vort_strip(y, Ly/2,5)
-    v[:] = np.random.randn(*x.shape)*3
-
+    v[:] = vort_strip(y, Ly*2/3, xw=3*d)\
+        + -vort_strip(y, Ly*1/3,xw=3*d)
 
     # v[:] = np.sin(x * 2 * pi /Lx) * np.cos(4*y * 2 * pi /Ly) * d*d
     # fac = (2*pi/Lx)**2 + (8*pi/Ly)**2
@@ -269,7 +245,7 @@ if da.comm.rank == 0:
     import pylab as pl
     pl.ion()
 
-dt = d*2
+dt = d/2
 
 R = 1/d/d
 
@@ -283,19 +259,18 @@ B, kspd = getksp(I=1.0, h=-dt/d/d/R)
 onestep=partial(onestep, solver=kspd)
 
 # out = vort.copy()
-# ksp.solve(vort, out)
+# kspd.solve(vort, out)
+
 # pl.subplot(211)
 # pl.pcolormesh(da.getVecArray(vort)[:]) ; pl.colorbar()
 # pl.subplot(212)
 # pl.pcolormesh(da.getVecArray(out)[:]) ; pl.colorbar()
 
 # k = input()
-# sys.exit()
 print(da.comm.rank)
 for i, ( t, v ) in enumerate(steps(onestep, vort, dt, [0.0, 10000 * dt])):
-    
     if da.comm.rank == 0:
-        if i%50 == 0:
+        if i%20 == 0:
             pl.clf()
             pl.pcolormesh(da.getVecArray(v)[:])
             pl.colorbar()
