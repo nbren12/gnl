@@ -24,6 +24,7 @@ except ImportError:
 
 from gnl.pdes.tadmor.tadmor_2d import Tadmor2D
 from gnl.pdes.timestepping import steps
+from gnl.pdes.grid import ghosted_grid
 
 
 # initialize state
@@ -103,7 +104,6 @@ class BarotropicSolver(Tadmor2D):
 
         return uc
 
-
 def main(plot=True):
 
     # Setup grid
@@ -111,14 +111,8 @@ def main(plot=True):
     nx, ny = 100, 100
     Lx, Ly = pi, pi
 
+    (x,y), (dx,dy) = ghosted_grid([nx, ny], [Lx, Ly], g)
 
-    x = np.r_[-g:nx+g]/nx * Lx
-    y = np.r_[-g:ny+g]/ny * Ly
-
-    dx = x[1] - x[0]
-    dy = y[1] - y[0]
-
-    x, y = np.broadcast_arrays(x[:,None], y)
 
     state = State()
     # monkey patch the velocity
