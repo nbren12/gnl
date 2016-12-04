@@ -9,6 +9,14 @@ class PETScFab(MultiFab):
         self.lvec = self.da.createLocalVec()
         self.gvec = self.da.createGlobalVec()
 
+    def view(self, n_ghost):
+        inds = []
+        l = self.l
+        for (beg, end), start in zip(self.da.ranges, l.starts):
+            inds.append(slice(beg-start-n_ghost, end-start+n_ghost))
+        return self.l[inds][:].swapaxes(-1, 0)
+        return self.valid
+
     @property
     def n_ghost(self):
         return self.da.stencil_width
@@ -28,11 +36,7 @@ class PETScFab(MultiFab):
         np.swapaxes should not change the underlying memory structures.
         """
 
-        inds = []
-        l = self.l
-        for (beg, end), start in zip(self.da.ranges, l.starts):
-            inds.append(slice(beg-start, end-start))
-        return self.l[inds][:].swapaxes(-1, 0)
+        return self.view(0)
 
     @property
     def globalview(self):

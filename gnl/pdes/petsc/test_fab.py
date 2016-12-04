@@ -31,6 +31,10 @@ def test_fab():
 
     np.testing.assert_allclose(uc.validview, np.arange(nx))
 
+    # test view functions
+    np.testing.assert_allclose(uc.view(1), np.r_[9,0:10,0])
+    np.testing.assert_allclose(uc.view(2), np.r_[8,9,0:10,0,1])
+
 
 def test_solver(plot=False):
     nx, ny = 500, 300
@@ -83,9 +87,10 @@ def test_collocated_solver():
     PER = PETSc.DM.BoundaryType.PERIODIC
 
     # Need box stencil
+    # make the pressure and velocity have different stencil_widths
     da = PETSc.DMDA().create(sizes=[nx, ny], dof=2,
                              boundary_type=[PER, PER],
-                             stencil_width=1,
+                             stencil_width=3,
                              stencil_type='box')
 
     uc = PETScFab(da)
