@@ -98,6 +98,10 @@ def test_collocated_solver():
     uc.validview[0] = np.sin(2*x)
     uc.validview[1] = np.sin(y)
 
+    da_gp=  da.duplicate(dof=2,
+                             stencil_type='box',
+                             stencil_width=1)
+
     da_scalar=  da.duplicate(dof=1,
                              stencil_type='box',
                              stencil_width=1)
@@ -126,7 +130,7 @@ def test_collocated_solver():
 
     # get pressure correction
     # this step computes pressure and projects the velocity fields
-    gp = PETScFab(da)
+    gp = PETScFab(da_gp)
     solver.project(uc, gp)
     if plot:
             import pylab as pl

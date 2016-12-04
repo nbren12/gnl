@@ -153,6 +153,9 @@ class CollocatedPressureSolver(object):
         ksp.setFromOptions()
         self.ksp = ksp
 
+    def _view(self, uc):
+        return uc.view(self.da.stencil_width)
+
     def get_mat(self):
         """This returns an x-like stencil
 
@@ -190,7 +193,7 @@ class CollocatedPressureSolver(object):
 
     def compute_div(self, uc):
         uc.exchange()
-        ucv = uc.ghostview
+        ucv = self._view(uc)
 
         div_kernel(ucv[0], ucv[1], self.div.ghostview, self.h)
         self.div.gather()
@@ -211,10 +214,10 @@ class CollocatedPressureSolver(object):
         if gp.dof < 2:
             raise ValueError("Pressure gradient fab must have two components")
         self.compute_pressure(uc)
-        div_pressure(self.pres.ghostview,
-                     gp.ghostview[0],
-                     gp.ghostview[1],
-                     self.h)
+
+        pv = self._view(self.pres)
+        gpv = self._view(gp)
+        div_pressure(pv, gpv[0], gpv[1], self.h)
         gp.gather()
 
     def project(self, uc, gp):
