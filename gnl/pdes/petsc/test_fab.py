@@ -95,7 +95,8 @@ def test_collocated_solver(plot=False):
     pressure = PETScFab(da_scalar)
 
     solver = CollocatedPressureSolver(dx, da_scalar)
-    solver.solve(uc, pressure)
+    solver.compute_pressure(uc)
+    pressure = solver.pres
 
     p_ex = -np.cos(2*(x-dx/2))/2 + -np.cos(y-dy/2)
 

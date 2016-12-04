@@ -133,6 +133,9 @@ class CollocatedPressureSolver(object):
         # initialize fab for the divergence
         self.div = PETScFab(self.da)
 
+        # initialize fab for the pressure
+        self.pres = PETScFab(self.da)
+
         # Get the linear operator
         self.mat = self.get_mat()
 
@@ -194,10 +197,14 @@ class CollocatedPressureSolver(object):
 
         return self.div._gvec
 
-    def solve(self, uc, phi):
+    def compute_pressure(self, uc):
         div = self.compute_div(uc)
 
-        self.ksp.solve(div, phi._gvec)
+        self.ksp.solve(div, self.pres._gvec)
+
+
+    def pressure_grad(self, uc):
+        pass
 
 
 if __name__ == '__main__':
