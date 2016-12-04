@@ -105,13 +105,13 @@ class Poisson(object):
 
     def get_rhs(self, b: MultiFab):
         b.gather()
-        b._gvec *= self.spacing[0]*self.spacing[1]
+        b.gvec *= self.spacing[0]*self.spacing[1]
 
         return b
 
     def solve(self, b: MultiFab, x: MultiFab):
         b = self.get_rhs(b)
-        self.ksp.solve(b._gvec, x._gvec)
+        self.ksp.solve(b.gvec, x.gvec)
 
 
 class CollocatedPressureSolver(object):
@@ -195,12 +195,12 @@ class CollocatedPressureSolver(object):
         div_kernel(ucv[0], ucv[1], self.div.ghostview, self.h)
         self.div.gather()
 
-        return self.div._gvec
+        return self.div.gvec
 
     def compute_pressure(self, uc):
         div = self.compute_div(uc)
 
-        self.ksp.solve(div, self.pres._gvec)
+        self.ksp.solve(div, self.pres.gvec)
 
 
     def pressure_grad(self, uc):

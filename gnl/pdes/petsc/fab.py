@@ -6,8 +6,8 @@ class PETScFab(MultiFab):
     def __init__(self, da):
         "docstring"
         self.da = da
-        self._lvec = self.da.createLocalVec()
-        self._gvec = self.da.createGlobalVec()
+        self.lvec = self.da.createLocalVec()
+        self.gvec = self.da.createGlobalVec()
 
     @property
     def n_ghost(self):
@@ -32,14 +32,14 @@ class PETScFab(MultiFab):
 
     @property
     def l(self):
-        return self.da.getVecArray(self._lvec)
+        return self.da.getVecArray(self.lvec)
 
     @property
     def g(self):
-        return self.da.getVecArray(self._gvec)
+        return self.da.getVecArray(self.gvec)
 
     def scatter(self):
-        self.da.globalToLocal(self._gvec, self._lvec)
+        self.da.globalToLocal(self.gvec, self.lvec)
 
     def gather(self):
         self.g[:] = self.validview.swapaxes(0, -1)
