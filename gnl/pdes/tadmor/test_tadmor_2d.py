@@ -30,6 +30,7 @@ def tadmor_error(n):
     tad = Tadmor2D()
     tad.fx=fx
     tad.fy=fy
+    tad.geom.n_ghost = 8
 
 
 
