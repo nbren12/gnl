@@ -58,9 +58,6 @@ def _solve_laplace(uv, dx, dy):
     return px, py
 
 class BarotropicSolver(Tadmor2D):
-    def __init__(self, *args, **kwargs):
-        "docstring"
-        super(BarotropicSolver, self).__init__(*args, **kwargs)
 
     def init_pgrad(self, uc):
         self.pg = MultiFab(data=uc.data.copy(), n_ghost=uc.n_ghost, dof=2)
@@ -101,7 +98,7 @@ class BarotropicSolver(Tadmor2D):
 
     def _extra_corrector(self, uc):
         self.pg.exchange()
-        return self.pg.ghostview
+        uc[:2,...] += self.pg.ghostview
 
     def onestep(self, uc, t, dt):
         try:

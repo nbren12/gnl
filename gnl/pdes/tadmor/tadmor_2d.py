@@ -72,7 +72,7 @@ class Tadmor2DBase(object):
         # Eq. (1.1) in Jiand and Tadmor
         ux = _slopes(self.fx(uc), axis=1)
         uy = _slopes(self.fy(uc), axis=2)
-        uc += self._extra_corrector(uc)
+        self._extra_corrector(uc)
         uc -= lmd_x / 2 * ux + lmd_y / 2 * uy
 
         # corrector
