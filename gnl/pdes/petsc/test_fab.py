@@ -66,7 +66,7 @@ def test_solver(plot=False):
 
     np.testing.assert_allclose(soln.g[:], p_ex, atol=dx**2)
 
-def test_collocated_solver(plot=True):
+def test_collocated_solver(plot=False):
 
     nx= ny = 500
     Lx, Ly = 2*pi, 2*pi

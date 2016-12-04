@@ -1,3 +1,4 @@
+#cython: boundscheck=False
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 from cython.parallel cimport prange
@@ -37,7 +38,6 @@ cdef double minmod(double a,double b,double c) nogil:
         return 0.0
 
 @inplacewrapper
-@cython.boundscheck(False)
 def _slopes(uy, uc, axis=-1, tht=None, limiter=None):
     """Calculate slopes
 
@@ -82,7 +82,6 @@ def _slopes(uy, uc, axis=-1, tht=None, limiter=None):
                         uyv[j, i, k] = cent
 
 @inplacewrapper
-@cython.boundscheck(False)
 def _stagger_avg(avg, uci):
     uxi = _slopes(uci, axis=1)
     uyi = _slopes(uci, axis=2)

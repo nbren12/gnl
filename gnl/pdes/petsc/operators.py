@@ -11,6 +11,8 @@ import numpy as np
 from petsc4py import PETSc
 from .fab import MultiFab, PETScFab
 
+from .kernel import div_kernel
+
 def poisson(da: PETSc.DM, spacing=None, a=0.0, b=1.0, A: PETSc.Mat = None,
             bcs=None) -> PETSc.Mat:
     """
@@ -112,18 +114,6 @@ class Poisson(object):
         self.ksp.solve(b._gvec, x._gvec)
 
 
-
-def _div_kernel(u, v, d, h):
-    nx, ny = u.shape
-
-    h2 = h
-
-    for i in range(nx):
-        for j in range(ny):
-            d[i,j] = h2 * ((u[i,j] + u[i, j-1] - u[i-1,j] - u[i-1,j-1]) +
-                     (v[i,j] + v[i-1,j] - v[i,j-1] - v[i-1,j-1]))
-
-
 class CollocatedPressureSolver(object):
     """PETSc Poisson solver
 
@@ -199,7 +189,7 @@ class CollocatedPressureSolver(object):
         uc.exchange()
         ucv = uc.ghostview
 
-        _div_kernel(ucv[0], ucv[1], self.div.ghostview, self.h)
+        div_kernel(ucv[0], ucv[1], self.div.ghostview, self.h)
         self.div.gather()
 
         return self.div._gvec

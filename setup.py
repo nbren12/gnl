@@ -15,6 +15,11 @@ ext_modules = [Extension("gnl.gslrand",
     libraries = [],
     include_dirs = [np.get_include()] # This line is crucial
     ),
+    Extension("gnl.pdes.petsc.kernel",
+    sources = ["gnl/pdes/petsc/kernel.pyx"],
+    libraries = [],
+    include_dirs = [np.get_include()] # This line is crucial
+    ),
     ]
 
 setup(
