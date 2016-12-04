@@ -14,37 +14,30 @@ from petsc4py import PETSc
 from gnl.pdes.barotropic.barotropic import BarotropicSolver
 from gnl.pdes.petsc.fab import PETScFab, MultiFab
 from gnl.pdes.grid import ghosted_grid
-from gnl.pdes.petsc.operators import poisson
+from gnl.pdes.petsc.operators import CollocatedPressureSolver
 from gnl.timestepping import steps
 
 
 class BarotropicSolverFD(BarotropicSolver):
-    pass
+    def __init__(self, da, h, *args, **kwargs):
+        "docstring"
+        super(BarotropicSolverFD, self).__init__( *args, **kwargs)
+        self._pressure_solver = CollocatedPressureSolver(h, da)
+
+        self.geom.dx, self.geom.dy = h, h
+
+        # initialize pressure gradient
+        da_gp=  da.duplicate(dof=2, stencil_type='box', stencil_width=1)
+        self.gp = PETScFab(da_gp)
+
+    def pressure_solve(self, uc):
+        self._pressure_solver.project(uc, self.gp)
 
 
-def test_fab():
-    # Setup grid
-    g=2
-    nx= 10
+def main():
 
-    PER = PETSc.DM.BoundaryType.PERIODIC
-
-
-    da = PETSc.DMDA().create(sizes=[nx], dof=1, stencil_width=g,
-                             boundary_type=[PER])
-    uc = PETScFab(da)
-
-
-    uc.g[:] = np.r_[0:nx]
-    uc.scatter()
-
-    # uc.exchange()
-    assert uc.validview.shape == (10,)
-    assert uc.ghostview.shape == (14,)
-
-    np.testing.assert_allclose(uc.validview, np.arange(nx))
-
-def main(plot=True):
+    opts = PETSc.Options()
+    plot = opts.getBool("plot", False)
 
     # Setup grid
     g = 4
@@ -59,10 +52,8 @@ def main(plot=True):
                              boundary_type=[PER, PER])
     da_scalar = da.duplicate(dof=1,
                              stencil_width=1,
-                             stencil_type='star',
+                             stencil_type='box',
                              boundary_type=[PER, PER])
-    pressure = PETScFab(da_scalar)
-    poisson  = Poisson(0.0, 1.0, da_scalar, [dx, dy])
 
 
     uc = PETScFab(da)
@@ -72,9 +63,7 @@ def main(plot=True):
     ucv[0] = (y > Ly / 3) * (2 * Ly / 3 > y)
     ucv[1] = np.sin(2 * pi * x / Lx) * .3 / (2 * pi / Lx)
 
-    tad = BarotropicSolverFD()
-    tad.geom.dx = dx
-    tad.geom.dy = dx
+    tad = BarotropicSolverFD(da_scalar, dx)
 
 
 
@@ -90,7 +79,8 @@ def main(plot=True):
         import pylab as pl
         pl.ion()
 
-    for i, (t, uc) in enumerate(steps(tad.onestep, uc, dt, [0.0, 10000* dt])):
+    for i, (t, uc) in enumerate(steps(tad.onestep, uc, dt, [0.0, 100* dt])):
+        print(i)
         if i % 100 == 0:
             if plot:
                 pl.clf()
@@ -99,6 +89,5 @@ def main(plot=True):
                 pl.pause(.01)
 if __name__ == '__main__':
     # main(plot=False)
-    # main(plot=True)
-    test_solver(plot=False)
+    main()
     # test_fab()
