@@ -4,6 +4,11 @@ import numpy as np
 from .fab import PETSc, PETScFab
 from .operators import pi, Poisson, CollocatedPressureSolver
 
+plot = False
+
+if plot:
+    import pylab as pl
+
 def test_fab():
     # Setup grid
     g=2
@@ -66,7 +71,7 @@ def test_solver(plot=False):
 
     np.testing.assert_allclose(soln.g[:], p_ex, atol=dx**2)
 
-def test_collocated_solver(plot=False):
+def test_collocated_solver():
 
     nx= ny = 500
     Lx, Ly = 2*pi, 2*pi
@@ -78,7 +83,7 @@ def test_collocated_solver(plot=False):
     PER = PETSc.DM.BoundaryType.PERIODIC
 
     # Need box stencil
-    da = PETSc.DMDA().create(sizes=[nx, ny], dof=2, 
+    da = PETSc.DMDA().create(sizes=[nx, ny], dof=2,
                              boundary_type=[PER, PER],
                              stencil_width=1,
                              stencil_type='box')
@@ -111,4 +116,42 @@ def test_collocated_solver(plot=False):
         pl.colorbar()
         pl.show()
 
-    np.testing.assert_allclose(p_ex, pressure.g[:].T, atol=dx**2)
+    np.testing.assert_allclose(p_ex, pressure.globalview, atol=dx**2)
+
+
+    # get pressure correction
+    # this step computes pressure and projects the velocity fields
+    gp = PETScFab(da)
+    solver.project(uc, gp)
+    if plot:
+            import pylab as pl
+            pl.subplot(121)
+            pl.pcolormesh(gp.globalview[0])
+            pl.colorbar()
+            pl.subplot(122)
+            pl.pcolormesh(gp.globalview[1])
+            pl.colorbar()
+            pl.show()
+
+    # Test pressure gradient
+    px_ex = np.sin(2*x)
+    np.testing.assert_allclose(px_ex, gp.globalview[0], atol=dx**2)
+    py_ex = np.sin(y)
+    np.testing.assert_allclose(py_ex, gp.globalview[1], atol=dx**2)
+
+    np.testing.assert_allclose(uc.globalview, 0, atol=1e-6)
+
+    # test that the pressure projection is indeed a projection operator
+    # another projection step should not alter the velocities
+    uc0 = uc.globalview.copy()
+    solver.project(uc, gp)
+
+    if plot:
+        pl.pcolormesh(uc0[0] - uc.globalview[0])
+        pl.colorbar()
+        pl.show()
+
+    np.testing.assert_allclose(uc0, uc.globalview, atol=1e-6)
+
+if __name__ == '__main__':
+    test_collocated_solver()

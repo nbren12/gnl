@@ -1,6 +1,6 @@
 """Linear Operators and Solvers using petsc4py
 
-this module provides some convenience functions and classes for using PETSc's
+this module provides some convenience functions and classes for using PETSc
 linear solvers.
 
 """
@@ -11,7 +11,7 @@ import numpy as np
 from petsc4py import PETSc
 from .fab import MultiFab, PETScFab
 
-from .kernel import div_kernel
+from .kernel import div_kernel, div_pressure
 
 def poisson(da: PETSc.DM, spacing=None, a=0.0, b=1.0, A: PETSc.Mat = None,
             bcs=None) -> PETSc.Mat:
@@ -194,17 +194,49 @@ class CollocatedPressureSolver(object):
 
         div_kernel(ucv[0], ucv[1], self.div.ghostview, self.h)
         self.div.gather()
-
-        return self.div.gvec
-
     def compute_pressure(self, uc):
-        div = self.compute_div(uc)
+        self.compute_div(uc)
+        self.ksp.solve(self.div.gvec, self.pres.gvec)
+        self.pres.scatter()
 
-        self.ksp.solve(div, self.pres.gvec)
+    def compute_gpres(self, uc, gp):
+        """
 
+        Parameters
+        ----------
+        uc: MultiFab with ncomp>2
+        gp: MultiFab with ncomp=2
+        """
 
-    def pressure_grad(self, uc):
-        pass
+        if gp.dof < 2:
+            raise ValueError("Pressure gradient fab must have two components")
+        self.compute_pressure(uc)
+        div_pressure(self.pres.ghostview,
+                     gp.ghostview[0],
+                     gp.ghostview[1],
+                     self.h)
+        gp.gather()
+
+    def project(self, uc, gp):
+        """Projection step
+
+        Compute pressure gradient and project uc onto divergence-free space
+
+        Parameters
+        ----------
+        uc: MultiFab
+            the velocity field (uc.dof=2)
+        gp: MultiFab
+            the pressure gradient (gp.dof=2)
+
+        """
+        self.compute_gpres(uc, gp)
+
+        for i in range(2):
+            uc.validview[i] -= gp.validview[i]
+
+        uc.gather()
+        gp.gather()
 
 
 if __name__ == '__main__':
