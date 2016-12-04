@@ -1,3 +1,9 @@
+"""Linear Operators and Solvers using petsc4py
+
+this module provides some convenience functions and classes for using PETSc's
+linear solvers.
+
+"""
 from itertools import product
 from math import pi
 import numpy as np
@@ -106,44 +112,103 @@ class Poisson(object):
         self.ksp.solve(b._gvec, x._gvec)
 
 
-def test_solver(plot=False):
-    nx, ny = 500, 300
-    Lx, Ly = 2*pi, 2*pi
 
-    dx, dy = nx/Lx, ny/Ly
+def _div_kernel(u, v, d, h):
+    nx, ny = u.shape
 
-    x, y = np.mgrid[0:Lx:dx,0:Ly:dy]
+    h2 = h
 
-    PER = PETSc.DM.BoundaryType.PERIODIC
-
-    da = PETSc.DMDA().create(sizes=[nx, ny], dof=1, stencil_width=1,
-                             boundary_type=[PER, PER], stencil_type='star')
-    soln = PETScFab(da)
-    rhs = PETScFab(da)
-
-    rhs.g[:] = np.sin(3*x) * np.cos(2*y)
-    rhs.scatter()
-
-    p_ex = rhs.g[:] / (-9 - 4)
-
-    poisson  = Poisson(0.0, 1.0, da, [dx, dy])
-    poisson.solve(rhs,soln)
+    for i in range(nx):
+        for j in range(ny):
+            d[i,j] = h2 * ((u[i,j] + u[i, j-1] - u[i-1,j] - u[i-1,j-1]) +
+                     (v[i,j] + v[i-1,j] - v[i,j-1] - v[i-1,j-1]))
 
 
-    if plot:
-        import pylab as pl
-        pl.subplot(131)
-        pl.pcolormesh(p_ex)
-        pl.colorbar()
-        pl.subplot(132)
-        pl.pcolormesh(soln.g[:])
-        pl.colorbar()
-        pl.subplot(133)
-        pl.pcolormesh(soln.g[:]-p_ex)
-        pl.colorbar()
-        pl.show()
+class CollocatedPressureSolver(object):
+    """PETSc Poisson solver
 
-    np.testing.assert_allclose(soln.g[:], p_ex, atol=dx**2)
+
+    Assume that the data uses a constant grid spacing
+    """
+
+    def __init__(self, h, da):
+        "docstring"
+
+        self.h = h
+        self.da= da
+
+        if self.da.stencil_type != PETSc.DMDA.StencilType.BOX:
+            raise ValueError("Need DMDA with box stencil-type")
+
+        # initialize fab for the divergence
+        self.div = PETScFab(self.da)
+
+        # Get the linear operator
+        self.mat = self.get_mat()
+
+        # constant null space
+        ns = PETSc.NullSpace().create(constant=True)
+        self.mat.setNullSpace(ns)
+
+
+        # make solver
+        ksp = PETSc.KSP().create()
+        ksp.setOperators(self.mat)
+        ksp.setType('cg')
+        pc = ksp.getPC()
+        pc.setType('none')
+        ksp.setFromOptions()
+        self.ksp = ksp
+
+    def get_mat(self):
+        """This returns an x-like stencil
+
+        """
+        da = self.da
+
+        A = da.createMatrix()
+
+        # use stencil to set entries
+        row = PETSc.Mat.Stencil()
+        col = PETSc.Mat.Stencil()
+
+
+        if da.dim == 2:
+            ir = range(*da.ranges[0])
+            jr = range(*da.ranges[1])
+
+            for i, j in product(ir, jr):
+                row.index = (i,j)
+
+                for index, value in [((i, j),  -4 ),
+                                    ((i-1, j-1), 1),
+                                    ((i-1, j+1), 1),
+                                    ((i+1, j-1), 1),
+                                    ((i+1, j+1), 1)]:
+                    col.index = index
+                    A.setValueStencil(row, col, value)
+        else:
+            raise NotImplementedError("This class only works with two dimensional data")
+
+        A.assemblyBegin()
+        A.assemblyEnd()
+
+        return A
+
+    def compute_div(self, uc):
+        uc.exchange()
+        ucv = uc.ghostview
+
+        _div_kernel(ucv[0], ucv[1], self.div.ghostview, self.h)
+        self.div.gather()
+
+        return self.div._gvec
+
+    def solve(self, uc, phi):
+        div = self.compute_div(uc)
+
+        self.ksp.solve(div, phi._gvec)
+
 
 if __name__ == '__main__':
     import timeit
