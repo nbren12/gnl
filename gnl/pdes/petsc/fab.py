@@ -14,6 +14,10 @@ class PETScFab(MultiFab):
         return self.da.stencil_width
 
     @property
+    def dof(self):
+        return self.da.dof
+
+    @property
     def ghostview(self):
         return self.l[:].swapaxes(-1, 0)
 
@@ -31,6 +35,10 @@ class PETScFab(MultiFab):
         return self.l[inds][:].swapaxes(-1, 0)
 
     @property
+    def globalview(self):
+        return self.g[:].swapaxes(0, -1)
+
+    @property
     def l(self):
         return self.da.getVecArray(self.lvec)
 
@@ -42,7 +50,7 @@ class PETScFab(MultiFab):
         self.da.globalToLocal(self.gvec, self.lvec)
 
     def gather(self):
-        self.g[:] = self.validview.swapaxes(0, -1)
+        self.globalview[:] = self.validview
 
     def exchange(self):
         self.gather()
