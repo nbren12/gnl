@@ -55,6 +55,9 @@ class Tadmor2DBase(object):
     def fy(self, uc):
         raise NotImplementedError
 
+    def _extra_corrector(self, uc):
+        return 0
+
     def _single_step(self, uc, dx, dy, dt):
 
         ux = np.zeros_like(uc)
@@ -69,6 +72,7 @@ class Tadmor2DBase(object):
         # Eq. (1.1) in Jiand and Tadmor
         ux = _slopes(self.fx(uc), axis=1)
         uy = _slopes(self.fy(uc), axis=2)
+        uc += self._extra_corrector(uc)
         uc -= lmd_x / 2 * ux + lmd_y / 2 * uy
 
         # corrector

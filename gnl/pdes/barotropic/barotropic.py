@@ -47,10 +47,22 @@ def _solve_laplace(uv, dx, dy):
 
     p = (fu * k + fv * l) / lapl
 
-    u[:] -= real(ifft2(p * k))
-    v[:] -= real(ifft2(p * l))
+    px = real(ifft2(p*k))
+    py = real(ifft2(p*l))
+
+    u[:] -= px
+    v[:] -= py
+
+    return px, py
 
 class BarotropicSolver(Tadmor2D):
+    def __init__(self, *args, **kwargs):
+        "docstring"
+        super(BarotropicSolver, self).__init__(*args, **kwargs)
+
+    def init_pgrad(self, uc):
+        self.pg = MultiFab(data=uc.data.copy(), n_ghost=uc.n_ghost, dof=2)
+
     def fx(self, uc):
         u = uc[0]
         v = uc[1]
@@ -81,17 +93,21 @@ class BarotropicSolver(Tadmor2D):
         dx = self.geom.dx
         dy = self.geom.dy
 
-        try:
-            uv = uc.validview
-        except:
-            uv = self.geom.validview(uc)
+        uv = uc.validview
 
-        _solve_laplace(uv, dx, dy)
+        self.pg.validview[0], self.pg.validview[1] = _solve_laplace(uv, dx, dy)
 
+    def _extra_corrector(self, uc):
+        self.pg.exchange()
+        return self.pg.ghostview
 
     def onestep(self, uc, t, dt):
-        self.advection_step(uc, dt)
+        try:
+            pg = self.pg
+        except AttributeError:
+            self.init_pgrad(uc)
         self.pressure_solve(uc)
+        self.advection_step(uc, dt)
 
         return uc
 
