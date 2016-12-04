@@ -52,3 +52,6 @@ class Poisson2DX(object):
 
 
         _kernel_2dx(x, y)
+
+    def getDiagonal(self, mat, x):
+        x.set(-4.0)

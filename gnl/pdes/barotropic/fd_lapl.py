@@ -1,7 +1,8 @@
-""" Implementation of tadmor scheme using finite difference for the laplace solve
+"""Implementation of tadmor scheme using finite difference for the laplace solve
 
 
-
+The solver in this approach is orders of magnitude slower than spectral solver
+in barotropic.py.
 
 """
 from math import pi
@@ -15,6 +16,7 @@ from gnl.pdes.barotropic.barotropic import BarotropicSolver
 from gnl.pdes.petsc.fab import PETScFab, MultiFab
 from gnl.pdes.grid import ghosted_grid
 from gnl.pdes.petsc.operators import CollocatedPressureSolver
+from gnl.pdes.petsc.python_operators import PythonCollocatedPressureSolver
 from gnl.timestepping import steps
 
 
@@ -22,6 +24,7 @@ class BarotropicSolverFD(BarotropicSolver):
     def __init__(self, da, h, *args, **kwargs):
         "docstring"
         super(BarotropicSolverFD, self).__init__( *args, **kwargs)
+        self._pressure_solver = PythonCollocatedPressureSolver(h, da)
         self._pressure_solver = CollocatedPressureSolver(h, da)
 
         self.geom.dx, self.geom.dy = h, h
@@ -74,12 +77,13 @@ def main():
     # np.testing.assert_almost_equal(pu, ppu)
 
     dt = min(dx, dy) / 4
+    nt = opts.getInt("nt", 100)
 
     if plot:
         import pylab as pl
         pl.ion()
 
-    for i, (t, uc) in enumerate(steps(tad.onestep, uc, dt, [0.0, 100* dt])):
+    for i, (t, uc) in enumerate(steps(tad.onestep, uc, dt, [0.0,nt* dt])):
         print(i)
         if i % 100 == 0:
             if plot:
@@ -87,6 +91,8 @@ def main():
                 pl.pcolormesh(uc.validview[0])
                 pl.colorbar()
                 pl.pause(.01)
+    if plot:
+        input()
 if __name__ == '__main__':
     # main(plot=False)
     main()
