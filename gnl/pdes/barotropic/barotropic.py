@@ -1,7 +1,9 @@
-"""Barotropic 2d dynamics using Chorin's projection method
+"""Barotropic 2d dynamics using Chorin's projection method and high resolution
+advection schemes
 
 u_t + div(u u)  + f x u = - grad  p
 u_x + v_y = 0
+
 """
 import logging
 logging.basicConfig(level=logging.INFO)
