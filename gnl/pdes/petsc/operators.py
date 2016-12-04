@@ -139,11 +139,6 @@ class CollocatedPressureSolver(object):
         # Get the linear operator
         self.mat = self.get_mat()
 
-        # constant null space
-        ns = PETSc.NullSpace().create(constant=True)
-        self.mat.setNullSpace(ns)
-
-
         # make solver
         ksp = PETSc.KSP().create()
         ksp.setOperators(self.mat)
@@ -188,6 +183,10 @@ class CollocatedPressureSolver(object):
 
         A.assemblyBegin()
         A.assemblyEnd()
+
+        # constant null space
+        ns = PETSc.NullSpace().create(constant=True)
+        A.setNullSpace(ns)
 
         return A
 
@@ -240,7 +239,6 @@ class CollocatedPressureSolver(object):
 
         uc.gather()
         gp.gather()
-
 
 if __name__ == '__main__':
     import timeit

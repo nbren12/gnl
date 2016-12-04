@@ -1,8 +1,10 @@
 """Tests for petsc convenienc functions
 """
+import pytest
 import numpy as np
 from .fab import PETSc, PETScFab
 from .operators import pi, Poisson, CollocatedPressureSolver
+from .python_operators import PythonCollocatedPressureSolver
 
 plot = False
 
@@ -75,7 +77,10 @@ def test_solver(plot=False):
 
     np.testing.assert_allclose(soln.g[:], p_ex, atol=dx**2)
 
-def test_collocated_solver():
+@pytest.mark.parametrize("pressure_solver",
+                          [CollocatedPressureSolver,
+                           PythonCollocatedPressureSolver])
+def test_collocated_solver(pressure_solver):
 
     nx= ny = 500
     Lx, Ly = 2*pi, 2*pi
@@ -108,7 +113,7 @@ def test_collocated_solver():
 
     pressure = PETScFab(da_scalar)
 
-    solver = CollocatedPressureSolver(dx, da_scalar)
+    solver = pressure_solver(dx, da_scalar)
     solver.compute_pressure(uc)
     pressure = solver.pres
 
