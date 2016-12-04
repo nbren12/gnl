@@ -140,4 +140,6 @@ def test_laplacian():
         print("pyamg cg {0}".format(elapsed()))
 
     pl.show()
-test_laplacian()
+
+if __name__ == '__main__':
+    test_laplacian()
