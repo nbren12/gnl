@@ -1,13 +1,9 @@
 """ Python implementation of the Tadmor centered scheme in 2d
 
 
-Routines
---------
-central_scheme - 2d implementation of tadmor centered scheme
-
-TODO
-----
-Replace all periodic_bc calls with `comm', so that this code can be run in parallel
+Members
+-------
+Tadmor2D
 """
 from functools import partial
 import numpy as np
