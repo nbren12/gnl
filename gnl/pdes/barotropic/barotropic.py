@@ -22,7 +22,7 @@ except ImportError:
     from scipy.fftpack import fft2, ifft2, fftfreq
     logging.info("using scipt fftpack")
 
-from gnl.pdes.tadmor.tadmor_2d import Tadmor2D
+from gnl.pdes.tadmor.tadmor_2d import Tadmor2D, MultiFab
 from gnl.pdes.timestepping import steps
 from gnl.pdes.grid import ghosted_grid
 
@@ -49,21 +49,6 @@ def _solve_laplace(uv, dx, dy):
 
     u[:] -= real(ifft2(p * k))
     v[:] -= real(ifft2(p * l))
-
-# initialize state
-class State(object):
-    def comm():
-        pass
-
-    @property
-    def uc(self):
-        return np.concatenate((self.u[None, ...], self.v[None, ...]), axis=0)
-
-    @uc.setter
-    def uc(self, val):
-        self.u = val[0, ...]
-        self.v = val[1, ...]
-
 
 class BarotropicSolver(Tadmor2D):
     def fx(self, uc):
@@ -117,26 +102,19 @@ def main(plot=True):
     nx, ny = 200, 200
     Lx, Ly = pi, pi
 
-    (x,y), (dx,dy) = ghosted_grid([nx, ny], [Lx, Ly], g)
+    (x,y), (dx,dy) = ghosted_grid([nx, ny], [Lx, Ly], 0)
 
 
-    state = State()
     # monkey patch the velocity
-    state.u = (y > Ly / 3) * (2 * Ly / 3 > y)
-    state.v = np.sin(2 * pi * x / Lx) * .3 / (2 * pi / Lx)
+    uc  = MultiFab(sizes=[nx, ny], n_ghost=4, dof=2)
+    uc.validview[0] = (y > Ly / 3) * (2 * Ly / 3 > y)
+    uc.validview[1]= np.sin(2 * pi * x / Lx) * .3 / (2 * pi / Lx)
     # state.u = np.random.rand(*x.shape)
 
     tad = BarotropicSolver()
     tad.geom.dx = dx
     tad.geom.dy = dx
-    tad.geom.n_ghost = g
 
-    uc = state.uc
-
-    # pu, p = pressure_solve(uc)
-
-    # ppu = pressure_solve(pu.copy())
-    # np.testing.assert_almost_equal(pu, ppu)
 
     dt = min(dx, dy) / 4
 
@@ -148,7 +126,7 @@ def main(plot=True):
         if i % 100 == 0:
             if plot:
                 pl.clf()
-                pl.pcolormesh(tad.geom.validview(uc)[0])
+                pl.pcolormesh(uc.validview[0])
                 pl.colorbar()
                 pl.pause(.01)
 
