@@ -1,5 +1,12 @@
 """"2D two mode shallow water dynamics with barotropic mode
 
+TODO
+----
+- The code in barotropic only convection example seems interesting. Replicate it using the tensor notation. Maybe write a test.
+- Manually enter scheme from stechmann and majda TCFD paper using the tensor notation
+- Rename SWE2NonlinearSolver to TensorNonlinearSolver
+- How to do time integration
+
 """
 from itertools import product
 from numpy import pi
@@ -96,16 +103,17 @@ class SWE2NonlinearSolver(SWE2Solver):
         self._at = sparsify(at)
         self._bt = sparsify(bt)
 
-        self._au = [((0, 0,0), 1.0),
-                    ((0, 1,1), 1.0),
-                    ((0,2,2), 1.0),
-                    ((1,0,1), 1.0),
-                    ((2,0,2), 1.0)]
+        # these setting replicate the barotropic only class
+        # self._au = [((0, 0,0), 1.0),
+        #             ((0, 1,1), 1.0),
+        #             ((0,2,2), 1.0),
+        #             ((1,0,1), 1.0),
+        #             ((2,0,2), 1.0)]
 
-        self._at = [((1,0,1), 1.0),
-                    ((2, 0, 2), 1.0)]
-        self._bu = []
-        self._bt = []
+        # self._at = [((1,0,1), 1.0),
+        #             ((2, 0, 2), 1.0)]
+        # self._bu = []
+        # self._bt = []
 
     def fx(self, uc, dim='x'):
         fa = np.zeros_like(uc)
@@ -157,17 +165,25 @@ class SWE2NonlinearSolver(SWE2Solver):
         return fa
 
     def _extra_corrector(self, uc, dt):
-        self.pg.exchange()
-        f = self.split_terms(uc)
-        uc[:2,...] += self.pg.ghostview
-        uc += f * dt
+        # self.pg.exchange()
+        # f = self.split_terms(uc)
+        # uc[:2,...] += self.pg.ghostview
+        # uc += f * dt
+        pass
 
     def advection_step(self, uc, dt):
         self.central_scheme(uc, self.geom.dx, self.geom.dy, dt)
-        uc.exchange()
-        f = self.split_terms(uc.ghostview)
-        uc.ghostview[:] += f*dt/2 # .5 steps already done
 
+        # predictor corrector
+        uc.exchange()
+        uc0 = uc.ghostview.copy()
+
+        f = self.split_terms(uc.ghostview)
+        uc.ghostview[:] += f*dt
+        uc.exchange()
+
+        f1 = self.split_terms(uc.ghostview)
+        uc.ghostview[:] += (f1 - f) * dt/2
 
 
 def main(plot=False):
@@ -221,11 +237,11 @@ def main(plot=False):
                 # pl.contourf(uc.validview[tad.inds.index(('t', 1))], np.linspace(-1,2.5,11), cmap='YlGnBu')
                 # pl.colorbar()
                 # pl.contour(uc.validview[tad.inds.index(('t', 1))], np.linspace(-1,2.5,11), colors='k')
-                pl.pcolormesh(uc.validview[tad.inds.index(('u', 0))], vmin=-.5, vmax=1, cmap='YlGnBu_r')
+                pl.pcolormesh(uc.validview[tad.inds.index(('u', 1))], vmin=-.5, vmax=1, cmap='YlGnBu_r')
                 pl.colorbar()
                 pl.savefig("_frames/%04d.png"%iframe)
                 iframe +=1
                 pl.pause(.01)
 
 if __name__ == '__main__':
-    main()
+    main(plot=True)
