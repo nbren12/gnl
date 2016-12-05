@@ -67,6 +67,10 @@ class SWE2Solver(BarotropicSolver):
     def fy(self, uc):
         return self.fx(uc, dim='y')
 
+def nemult(a, b, c):
+    import numexpr as ne
+    return ne.evaluate("a*b*c")
+
 class SWE2NonlinearSolver(SWE2Solver):
     ntrunc = 2
     def __init__(self):
@@ -94,11 +98,11 @@ class SWE2NonlinearSolver(SWE2Solver):
             adv = 'v'
 
         for (i, j, k), val in self._au:
-            f['u', i] = val * q[adv, j] * q['u', k]
-            f['v', i] = val * q[adv, j] * q['v', k]
+            f['u', i] = nemult(val , q[adv, j] , q['u', k])
+            f['v', i] = nemult(val , q[adv, j] , q['v', k])
 
         for (i, j, k), val in self._at:
-            f['t', i] = val * q[adv, j] * q['t', k]
+            f['t', i] = nemult(val , q[adv, j] , q['t', k])
 
         for i in range(1,self.ntrunc+1):
             f['t', i] = q[adv, i]/i
@@ -188,7 +192,7 @@ def main(plot=True):
                 # pl.contourf(uc.validview[tad.inds.index(('t', 1))], np.linspace(-1,2.5,11), cmap='YlGnBu')
                 # pl.colorbar()
                 # pl.contour(uc.validview[tad.inds.index(('t', 1))], np.linspace(-1,2.5,11), colors='k')
-                pl.pcolormesh(uc.validview[tad.inds.index(('t', 1))], vmin=-.5, vmax=1, cmap='YlGnBu_r')
+                pl.pcolormesh(uc.validview[tad.inds.index(('u', 0))], vmin=-.5, vmax=1, cmap='YlGnBu_r')
                 pl.colorbar()
                 pl.savefig("_frames/%04d.png"%iframe)
                 iframe +=1
