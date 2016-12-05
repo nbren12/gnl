@@ -17,7 +17,7 @@ from gnl.pdes.petsc.fab import PETScFab, MultiFab
 from gnl.pdes.grid import ghosted_grid
 from gnl.pdes.petsc.operators import CollocatedPressureSolver
 from gnl.pdes.petsc.python_operators import PythonCollocatedPressureSolver
-from gnl.timestepping import steps
+from gnl.pdes.timestepping import steps
 
 
 class BarotropicSolverFD(BarotropicSolver):
@@ -29,13 +29,14 @@ class BarotropicSolverFD(BarotropicSolver):
 
         self.geom.dx, self.geom.dy = h, h
 
-        # initialize pressure gradient
-        da_gp=  da.duplicate(dof=2, stencil_type='box', stencil_width=1)
-        self.gp = PETScFab(da_gp)
 
     def pressure_solve(self, uc):
-        self._pressure_solver.project(uc, self.gp)
+        self._pressure_solver.project(uc, self.pg)
 
+    def init_pgrad(self, uc):
+        # initialize pressure gradient
+        da_gp=  uc.da.duplicate(dof=2, stencil_type='box', stencil_width=1)
+        self.pg = PETScFab(da_gp)
 
 def main():
 

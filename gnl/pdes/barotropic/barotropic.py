@@ -97,8 +97,9 @@ class BarotropicSolver(Tadmor2D):
         self.pg.validview[0], self.pg.validview[1] = _solve_laplace(uv, dx, dy)
 
     def _extra_corrector(self, uc, dt):
-        self.pg.exchange()
-        uc[:2,...] += self.pg.ghostview
+        pass
+        # self.pg.exchange()
+        # uc[:2,...] += self.pg.ghostview
 
     def onestep(self, uc, t, dt):
         try:
