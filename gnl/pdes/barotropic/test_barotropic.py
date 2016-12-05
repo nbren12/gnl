@@ -10,7 +10,7 @@ def taylor_vortex(x, y):
     return cos(x) * sin(y), -sin(x)*cos(y)
 
 def error(x,y):
-    return np.mean((x-y)**2)
+    return np.mean(np.abs(x-y))
 
 def taylor_vortex_error(time_end, n):
 
