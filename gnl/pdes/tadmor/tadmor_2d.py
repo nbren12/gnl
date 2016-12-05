@@ -23,11 +23,13 @@ def _roll2d(u):
 
 
 class MultiFab(object):
-    def __init__(self, data=None, sizes=None, n_ghost=0, dof=1):
+    def __init__(self, data=None, sizes=None, n_ghost=0, dof=None):
         "docstring"
 
         if data is not None:
-            self.data = data
+            if dof is None:
+                dof = -1
+            self.data = data[:dof,...]
         elif sizes is not None:
             self.data = np.zeros([dof] + [s + 2 * n_ghost for s in sizes])
         else:
