@@ -1,4 +1,4 @@
-"""2D two mode shallow water dynamics with barotropic mode
+""""2D two mode shallow water dynamics with barotropic mode
 
 """
 from itertools import product
@@ -7,6 +7,7 @@ import numpy as np
 from gnl.pdes.grid import ghosted_grid
 from gnl.pdes.timestepping import steps
 from gnl.pdes.tadmor.tadmor_2d import MultiFab
+from gnl.io import NetCDF4Writer
 
 from barotropic import BarotropicSolver
 
@@ -48,8 +49,11 @@ class SWE2Solver(BarotropicSolver):
             f['v', 0] += q[adv, i] * q['v', i]
 
         # Advection by barotropic flow
-        for v, i in product(['u', 'v', 't'], range(1,3)):
+        for v, i in product(['u', 'v'], range(1,3)):
             f[v, i] += q[adv, 0] * q[v, i]
+
+        for  i in range(1,3):
+            f['t', i] += q[adv, 0] * q['t', i] * i*i
 
         f[adv, 1] -= q['t', 1]
         f[adv, 2] -= q['t', 2]
@@ -67,6 +71,11 @@ class SWE2Solver(BarotropicSolver):
     def fy(self, uc):
         return self.fx(uc, dim='y')
 
+    def ncvars(self, uc):
+        get_name = lambda name, m: "{}{}".format(name, m)
+        for i, namet in enumerate(self.inds):
+            yield get_name(*namet), ('x', 'y'), uc.validview[i]
+
 def nemult(a, b, c):
     import numexpr as ne
     return ne.evaluate("a*b*c")
@@ -75,6 +84,7 @@ class SWE2NonlinearSolver(SWE2Solver):
     ntrunc = 2
     def __init__(self):
         "docstring"
+        from math import sqrt, pi
         from galerkin import flux_div_t, flux_div_u, sparsify
 
         # get coefficients
@@ -85,6 +95,17 @@ class SWE2NonlinearSolver(SWE2Solver):
         self._bu = sparsify(bu)
         self._at = sparsify(at)
         self._bt = sparsify(bt)
+
+        self._au = [((0, 0,0), 1.0),
+                    ((0, 1,1), 1.0),
+                    ((0,2,2), 1.0),
+                    ((1,0,1), 1.0),
+                    ((2,0,2), 1.0)]
+
+        self._at = [((1,0,1), 1.0),
+                    ((2, 0, 2), 1.0)]
+        self._bu = []
+        self._bt = []
 
     def fx(self, uc, dim='x'):
         fa = np.zeros_like(uc)
@@ -98,15 +119,15 @@ class SWE2NonlinearSolver(SWE2Solver):
             adv = 'v'
 
         for (i, j, k), val in self._au:
-            f['u', i] = nemult(val , q[adv, j] , q['u', k])
-            f['v', i] = nemult(val , q[adv, j] , q['v', k])
+            f['u', i] += nemult(val , q[adv, j] , q['u', k])
+            f['v', i] += nemult(val , q[adv, j] , q['v', k])
 
         for (i, j, k), val in self._at:
-            f['t', i] = nemult(val , q[adv, j] , q['t', k])
+            f['t', i] += nemult(val , q[adv, j] , q['t', k])
 
         for i in range(1,self.ntrunc+1):
-            f['t', i] = q[adv, i]/i
-            f[adv, i] = q['t', i]
+            f['t', i] -= q[adv, i]/i/i
+            f[adv, i] -= q['t', i]
 
         return fa
 
@@ -127,18 +148,18 @@ class SWE2NonlinearSolver(SWE2Solver):
 
 
         for (i, j, k), val in self._bu:
-            f['u', i] = val * w[j]* q['u', k]
-            f['v', i] = val * w[j] * q['v', k]
+            f['u', i] += val * w[j]* q['u', k]
+            f['v', i] += val * w[j] * q['v', k]
 
         for (i, j, k), val in self._bt:
-            f['t', i] = val * w[j] * q['t', k]
+            f['t', i] += val * w[j] * q['t', k]
 
         return fa
 
     def _extra_corrector(self, uc, dt):
         self.pg.exchange()
         f = self.split_terms(uc)
-        uc[:2,...] += self.pg.ghostview 
+        uc[:2,...] += self.pg.ghostview
         uc += f * dt
 
     def advection_step(self, uc, dt):
@@ -148,7 +169,8 @@ class SWE2NonlinearSolver(SWE2Solver):
         uc.ghostview[:] += f*dt/2 # .5 steps already done
 
 
-def main(plot=True):
+
+def main(plot=False):
 
     # Setup grid
     g = 4
@@ -172,7 +194,13 @@ def main(plot=True):
     # bubble init conds
     uc.validview[tad.inds.index(('t', 1))] = ( (x-Lx/2)**2 + (y-Ly/2)**2  - .5**2 < 0)
 
-    dt = min(dx, dy) / 4
+    from scipy.ndimage import gaussian_filter
+    uc.validview[:] = gaussian_filter(uc.validview, [0.0, 1.5, 1.5])
+
+    grid = {'x': x[:,0], 'y': y[0,:]}
+    writer = NetCDF4Writer(grid, filename="swe2d.nc")
+
+    dt = min(dx, dy) / 10
 
     if plot:
         import pylab as pl
@@ -185,8 +213,9 @@ def main(plot=True):
         pl.ion()
 
     iframe = 0
-    for i, (t, uc) in enumerate(steps(tad.onestep, uc, dt, [0.0, 1000 * dt])):
-        if i % 10 == 0:
+    for i, (t, uc) in enumerate(steps(tad.onestep, uc, dt, [0.0, 400 * dt])):
+        if i % 20 == 0:
+            writer.collect(t, tad.ncvars(uc))
             if plot:
                 pl.clf()
                 # pl.contourf(uc.validview[tad.inds.index(('t', 1))], np.linspace(-1,2.5,11), cmap='YlGnBu')
