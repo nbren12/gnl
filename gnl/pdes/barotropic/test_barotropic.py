@@ -37,6 +37,8 @@ def taylor_vortex_error(time_end, n):
     dt = min(dx, dy) / 4
 
     for i, (t, uc) in enumerate(steps(tad.onestep, uc, dt, [0.0, time_end])):
+        if np.any(np.isnan(uc.validview)):
+            raise FloatingPointError("NAN in solution array!")
         pass
 
     if plot:

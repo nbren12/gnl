@@ -61,6 +61,7 @@ class BarotropicSolver(Tadmor2D):
 
     def init_pgrad(self, uc):
         self.pg = MultiFab(data=uc.data.copy(), n_ghost=uc.n_ghost, dof=2)
+        self.pg.ghostview[:] = 0.0
 
     def fx(self, uc):
         u = uc[0]
@@ -94,20 +95,22 @@ class BarotropicSolver(Tadmor2D):
 
         uv = uc.validview
 
-        self.pg.validview[0], self.pg.validview[1] = _solve_laplace(uv, dx, dy)
+        px, py = _solve_laplace(uv, dx, dy)
+
+        self.pg.validview[0] = px
+        self.pg.validview[1] = py
 
     def _extra_corrector(self, uc, dt):
-        pass
-        # self.pg.exchange()
-        # uc[:2,...] += self.pg.ghostview
+        self.pg.exchange()
+        uc[0:2,...] -= self.pg.ghostview/2
 
     def onestep(self, uc, t, dt):
         try:
             pg = self.pg
         except AttributeError:
             self.init_pgrad(uc)
-        self.pressure_solve(uc)
         self.advection_step(uc, dt)
+        self.pressure_solve(uc)
 
         return uc
 
