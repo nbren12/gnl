@@ -36,10 +36,10 @@ def tadmor_error(n):
 
     while (t < tend - 1e-10):
         dt = min(dt, tend-t)
-        uc = tad.central_scheme(uc, dx, dx, dt)
+        tad.central_scheme(uc, dx, dx, dt)
         t+=dt
 
-    return np.abs(initcond(x-t, y-t) - uc[0,...]).sum()/n/n
+    return np.mean(np.abs(initcond(x-t, y-t) - uc[0,...]).sum())
 
 
 def test_tadmor_convergence(plot=False):
@@ -57,7 +57,7 @@ def test_tadmor_convergence(plot=False):
         plt.title('Order of convergence p = %.2f'%p[0])
         plt.show()
 
-    if - p[0] < 1.9:
+    if abs(p[0]) < 1.9:
         raise ValueError('Order of convergence (p={p})is less than 2'.format(p=-p[0]))
 
 
@@ -163,7 +163,7 @@ def plot_slopes():
 
 if __name__ == '__main__':
     pass
-    # test_tadmor_convergence(plot=True)
-    plot_advection2d()
+    test_tadmor_convergence(plot=True)
+    # plot_advection2d()
     # test_slopes()
     # test_stagger_avg()

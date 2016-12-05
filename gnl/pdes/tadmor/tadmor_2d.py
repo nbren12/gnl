@@ -57,8 +57,8 @@ class Tadmor2DBase(object):
     def fy(self, uc):
         raise NotImplementedError
 
-    def _extra_corrector(self, uc):
-        return 0
+    def _extra_corrector(self, uc, dt):
+        pass
 
     def _single_step(self, uc, dx, dy, dt):
 
@@ -133,7 +133,7 @@ class Tadmor2D(Tadmor2DBase):
             uc[:] = super(Tadmor2D, self).central_scheme(uc, dx, dy, dt)
             return vec
         else:
-            fab = MultiFab(vec, self.geom.n_ghost)
+            fab = MultiFab(data=vec, n_ghost=self.geom.n_ghost)
             fab.exchange()
             uc = fab.ghostview
             return super(Tadmor2D, self).central_scheme(uc, dx, dy, dt)
