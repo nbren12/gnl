@@ -11,57 +11,22 @@ logging.basicConfig(level=logging.INFO)
 from numpy import pi, real
 import numpy as np
 
-
-try:
-    import pyfftw
-
-    fft2 = pyfftw.interfaces.scipy_fftpack.fft2
-    ifft2 = pyfftw.interfaces.scipy_fftpack.ifft2
-    fftfreq = pyfftw.interfaces.scipy_fftpack.fftfreq
-    pyfftw.interfaces.cache.enable()
-    logging.info("using pyfftw")
-except ImportError:
-    from scipy.fftpack import fft2, ifft2, fftfreq
-    logging.info("using scipt fftpack")
-
 from gnl.pdes.tadmor.tadmor_2d import Tadmor2D, MultiFab
 from gnl.pdes.timestepping import steps
 from gnl.pdes.grid import ghosted_grid
+from gnl.pdes.barotropic.pressure_solvers import CollocatedFDSolver
 
-
-def _solve_laplace(uv, dx, dy):
-    nx, ny = uv.shape[1:]
-
-    u = uv[0]
-    v = uv[1]
-
-    fu = fft2(u)
-    fv = fft2(v)
-
-    scal_y = 2 * pi / dy / ny
-    scal_x = 2 * pi / dx / nx
-
-    k = fftfreq(nx, 1 / nx)[:, None] * 1j * scal_x
-    l = fftfreq(ny, 1 / ny)[None, :] * 1j * scal_y
-
-    lapl = k**2 + l**2
-    lapl[0, 0] = 1.0
-
-    p = (fu * k + fv * l) / lapl
-
-    px = real(ifft2(p*k))
-    py = real(ifft2(p*l))
-
-    u[:] -= px
-    v[:] -= py
-
-    return px, py
 
 class BarotropicSolver(Tadmor2D):
+
+    pres_solver_cls = CollocatedFDSolver
 
     def init_pgrad(self, uc):
         self.pg = MultiFab(data=uc.data.copy(), n_ghost=uc.n_ghost, dof=2)
         self.pg.ghostview[:] = 0.0
+
+        self.pressure_solver = self.pres_solver_cls(
+            uc.validview.shape[1:], [self.geom.dx, self.geom.dy])
 
     def fx(self, uc):
         u = uc[0]
@@ -95,14 +60,14 @@ class BarotropicSolver(Tadmor2D):
 
         uv = uc.validview
 
-        px, py = _solve_laplace(uv, dx, dy)
+        px, py = self.pressure_solver.solve(uv, dx, dy)
 
         self.pg.validview[0] = px
         self.pg.validview[1] = py
 
     def _extra_corrector(self, uc, dt):
         self.pg.exchange()
-        uc[0:2,...] -= self.pg.ghostview/2
+        uc[0:2, ...] -= self.pg.ghostview / 2
 
     def onestep(self, uc, t, dt):
         try:
@@ -114,6 +79,7 @@ class BarotropicSolver(Tadmor2D):
 
         return uc
 
+
 def main(plot=True):
 
     # Setup grid
@@ -121,19 +87,17 @@ def main(plot=True):
     nx, ny = 200, 200
     Lx, Ly = pi, pi
 
-    (x,y), (dx,dy) = ghosted_grid([nx, ny], [Lx, Ly], 0)
-
+    (x, y), (dx, dy) = ghosted_grid([nx, ny], [Lx, Ly], 0)
 
     # monkey patch the velocity
-    uc  = MultiFab(sizes=[nx, ny], n_ghost=4, dof=2)
+    uc = MultiFab(sizes=[nx, ny], n_ghost=4, dof=2)
     uc.validview[0] = (y > Ly / 3) * (2 * Ly / 3 > y)
-    uc.validview[1]= np.sin(2 * pi * x / Lx) * .3 / (2 * pi / Lx)
+    uc.validview[1] = np.sin(2 * pi * x / Lx) * .3 / (2 * pi / Lx)
     # state.u = np.random.rand(*x.shape)
 
     tad = BarotropicSolver()
     tad.geom.dx = dx
     tad.geom.dy = dx
-
 
     dt = min(dx, dy) / 4
 
