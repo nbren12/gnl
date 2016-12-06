@@ -14,7 +14,7 @@ import numpy as np
 from gnl.pdes.tadmor.tadmor_2d import Tadmor2D, MultiFab
 from gnl.pdes.timestepping import steps
 from gnl.pdes.grid import ghosted_grid
-from gnl.pdes.barotropic.pressure_solvers import CollocatedFDSolver
+from gnl.pdes.barotropic.pressure_solvers import CollocatedFDSolver, CollocatedChannelFDSolver
 
 
 class BarotropicSolver(Tadmor2D):
@@ -60,7 +60,7 @@ class BarotropicSolver(Tadmor2D):
 
         uv = uc.validview
 
-        px, py = self.pressure_solver.solve(uv, dx, dy)
+        px, py = self.pressure_solver.solve(uv[0], uv[1], dx, dy)
 
         self.pg.validview[0] = px
         self.pg.validview[1] = py
@@ -78,6 +78,19 @@ class BarotropicSolver(Tadmor2D):
         self.pressure_solve(uc)
 
         return uc
+
+    @property
+    def bcs(self):
+        return None
+
+class ChannelSolver(BarotropicSolver):
+    pres_solver_cls = CollocatedChannelFDSolver
+
+    @property
+    def bcs(self):
+        return [('wrap', 'even'),
+                ('wrap', 'odd')]
+
 
 
 def main(plot=True):

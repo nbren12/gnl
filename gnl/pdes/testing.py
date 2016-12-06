@@ -39,3 +39,6 @@ def test_convergence(f, nlist, plot=False, latex=True,
 
     if  -p[0] < order_expected- .1:
         raise ValueError('Order of convergence (p={p})is less than 2'.format(p=-p[0]))
+
+
+
