@@ -35,7 +35,7 @@ class BarotropicSolverFD(BarotropicSolver):
 
     def init_pgrad(self, uc):
         # initialize pressure gradient
-        da_gp=  uc.da.duplicate(dof=2, stencil_type='box', stencil_width=1)
+        da_gp=  uc.da.duplicate(dof=2, stencil_type='box', stencil_width=uc.n_ghost)
         self.pg = PETScFab(da_gp)
 
 def main():

@@ -50,6 +50,10 @@ class MultiFab(object):
         return self.data
 
 
+    def view(self, g):
+        ng = self.n_ghost
+        return self.data[ng-g:-ng-g]
+
 class Tadmor2DBase(object):
     def fx(self, uc):
         raise NotImplementedError
