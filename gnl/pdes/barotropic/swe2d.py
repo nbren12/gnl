@@ -201,7 +201,7 @@ def main(plot=False):
     # uc.validview[1]= np.sin(2 * pi * x / Lx) * .3 / (2 * pi / Lx)
 
     # bubble init conds
-    uc.validview[tad.inds.index(('t', 1))] = ( (x-Lx/2)**2 + (y-Ly/2)**2  - .5**2 < 0) * .5
+    uc.validview[tad.inds.index(('t', 1))] = (((x-Lx/2)**2 + (y-Ly/2)**2  - .5**2 < 0) -.5) * 1
 
     from scipy.ndimage import gaussian_filter
     uc.validview[:] = gaussian_filter(uc.validview, [0.0, 1.5, 1.5])
@@ -223,6 +223,8 @@ def main(plot=False):
 
     iframe = 0
     for i, (t, uc) in enumerate(steps(tad.onestep, uc, dt, [0.0, 1000 * dt])):
+        if (np.any(np.isnan(uc.validview))):
+            raise FloatingPointError("NaN in solution array...quitting")
         if i % 20 == 0:
             writer.collect(t, tad.ncvars(uc))
             if plot:
