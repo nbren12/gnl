@@ -5,6 +5,7 @@ from .barotropic import BarotropicSolver, MultiFab, ghosted_grid
 from ..timestepping import steps
 
 plot = False
+PRINT_LATEX = True
 
 def taylor_vortex(x, y):
     return cos(x) * sin(y), -sin(x)*cos(y)
@@ -65,15 +66,30 @@ def test_taylor_convergence():
 
     err = np.array([taylor_vortex_error(1.0, n) for n in nlist])
     p = np.polyfit(np.log(nlist), np.log(err), 1)
+    rat = err[:-1]/err[1:]
+    rat = list(rat) + ["-"]
 
     print("")
     print("Convergence test results")
     print("----------------------------")
     print("Grid Sizes: "+repr(nlist))
     print("Errors: "+repr(err))
-    print("Ratio: "+repr(err[:-1]/err[1:]))
+    print("Ratio: "+repr(rat))
     print("Order of convergence:" +repr(-p[0]))
     print("")
+
+    if PRINT_LATEX:
+        def format(it):
+            if isinstance(it, str):
+                return it
+            elif isinstance(it, float):
+                return "%.3e"%it
+            else:
+                return repr(it)
+        print(r"n & $||err||_1$ & Ratio\\")
+        print(r"\hline \\")
+        for item in zip(nlist, err, rat):
+            print(" & ".join(format(it) for it in item) + r"\\")
 
     if plot:
         import matplotlib.pyplot as plt
