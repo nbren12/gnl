@@ -139,6 +139,12 @@ class SWE2NonlinearSolver(SWE2Solver):
 
         return fa
 
+    def _extra_corrector(self, uc, dt):
+        super(SWE2NonlinearSolver, self)._extra_corrector(uc, dt)
+        # predictor corrector
+        f = self.split_terms(uc)
+        uc[:] += f*dt
+
     def split_terms(self, uc):
         from scipy.ndimage import correlate1d
 
@@ -150,8 +156,8 @@ class SWE2NonlinearSolver(SWE2Solver):
         f = self.ix(fa)
 
         # compute divergence
-        w = {j:(correlate1d(q['u', j], [1/2/dx, 0, -1/2/dx], origin=-1, axis=0)
-                + correlate1d(q['v', j], [1/2/dy, 0, -1/2/dy], origin=-1, axis=1))
+        w = {j:(correlate1d(q['u', j], [1/2/dx, 0, -1/2/dx], origin=0, axis=0)
+                + correlate1d(q['v', j], [1/2/dy, 0, -1/2/dy], origin=0, axis=1))
              for j in range(1,self.ntrunc +1)}
 
 
@@ -164,27 +170,14 @@ class SWE2NonlinearSolver(SWE2Solver):
 
         return fa
 
-    def _extra_corrector(self, uc, dt):
-        # self.pg.exchange()
-        # f = self.split_terms(uc)
-        # uc[:2,...] += self.pg.ghostview
-        # uc += f * dt
-        pass
-
     def advection_step(self, uc, dt):
         self.central_scheme(uc, self.geom.dx, self.geom.dy, dt)
 
         # predictor corrector
         uc.exchange()
         uc0 = uc.ghostview.copy()
-
         f = self.split_terms(uc.ghostview)
-        uc.ghostview[:] += f*dt
-        uc.exchange()
-
-        f1 = self.split_terms(uc.ghostview)
-        uc.ghostview[:] += (f1 - f) * dt/2
-
+        uc.ghostview[:] += f*dt/2
 
 def main(plot=False):
 
@@ -208,7 +201,7 @@ def main(plot=False):
     # uc.validview[1]= np.sin(2 * pi * x / Lx) * .3 / (2 * pi / Lx)
 
     # bubble init conds
-    uc.validview[tad.inds.index(('t', 1))] = ( (x-Lx/2)**2 + (y-Ly/2)**2  - .5**2 < 0)
+    uc.validview[tad.inds.index(('t', 1))] = ( (x-Lx/2)**2 + (y-Ly/2)**2  - .5**2 < 0) * .5
 
     from scipy.ndimage import gaussian_filter
     uc.validview[:] = gaussian_filter(uc.validview, [0.0, 1.5, 1.5])
@@ -216,7 +209,7 @@ def main(plot=False):
     grid = {'x': x[:,0], 'y': y[0,:]}
     writer = NetCDF4Writer(grid, filename="swe2d.nc")
 
-    dt = min(dx, dy) / 10
+    dt = min(dx, dy) / 4
 
     if plot:
         import pylab as pl
@@ -229,7 +222,7 @@ def main(plot=False):
         pl.ion()
 
     iframe = 0
-    for i, (t, uc) in enumerate(steps(tad.onestep, uc, dt, [0.0, 400 * dt])):
+    for i, (t, uc) in enumerate(steps(tad.onestep, uc, dt, [0.0, 1000 * dt])):
         if i % 20 == 0:
             writer.collect(t, tad.ncvars(uc))
             if plot:

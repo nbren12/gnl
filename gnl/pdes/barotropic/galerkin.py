@@ -60,12 +60,19 @@ def sparsify(tensor):
     inds = zip(*[list(i) for i in inds])
     return list(zip(inds, val))
 
+def sparsify_inds(inds, tensor):
+    out = []
+    for i, val in sparsify(tensor):
+        out.append((tuple(ind[i] for ind in inds), val))
+
+    return out
+
 
 def flux_div_u():
     # flux terms in u equation no need to invert using mass matrix
     l, k, m = np.mgrid[0:3, 0:3, 0:3]
     flux_tensor = Au(l, k, m)
-    div_tensor = -Au(l, k, m) - Bu(l, k, m)
+    div_tensor = -Bu(l, k, m)
 
     div_tensor[:,0,:] = 0
 
@@ -77,7 +84,7 @@ def flux_div_t():
     l, k, m = np.mgrid[0:3, 0:3, 0:3]
     flux_tensor = At(l, k, m)
 
-    div_tensor = (-At(l, k, m) - Bt(l, k, m))
+    div_tensor = -At(l, k, m) - Bt(l, k, m)
     l[0, ...] = 1.0
     div_tensor/= l**2
 
