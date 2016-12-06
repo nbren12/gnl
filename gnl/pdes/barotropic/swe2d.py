@@ -4,6 +4,7 @@ TODO
 ----
 - The code in barotropic only convection example seems interesting. Replicate it using the tensor notation. Maybe write a test.
 - Rename SWE2NonlinearSolver to TensorNonlinearSolver
+- study stability of scheme in advective form
 
 """
 from itertools import product
@@ -201,7 +202,7 @@ def main(plot=False):
     # uc.validview[1]= np.sin(2 * pi * x / Lx) * .3 / (2 * pi / Lx)
 
     # bubble init conds
-    uc.validview[tad.inds.index(('t', 1))] = (((x-Lx/2)**2 + (y-Ly/2)**2  - .5**2 < 0) -.5) * 1
+    uc.validview[tad.inds.index(('t', 1))] = (((x-Lx/2)**2 + (y-Ly/2)**2  - .5**2 < 0) -.5) * .4
 
     from scipy.ndimage import gaussian_filter
     uc.validview[:] = gaussian_filter(uc.validview, [0.0, 1.5, 1.5])

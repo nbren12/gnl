@@ -1,5 +1,5 @@
 import numpy as np
-from .tadmor_2d import _slopes, periodic_bc, _stagger_avg, Tadmor2D
+from .tadmor_2d import _slopes, _stagger_avg, Tadmor2D
 
 def tadmor_error(n):
     uc = np.zeros((1, n+ 4, n + 4))
