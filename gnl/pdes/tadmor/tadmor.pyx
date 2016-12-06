@@ -118,3 +118,17 @@ def _corrector_step(double[:,:,:] out, double[:,:,:] fx ,
                                     - fx[i,j+1,k+1] + fx[i,j,k+1]) * lmd_x/2 \
                                     +(fy[i,j,k]-fy[i,j,k+1]
                                     -fy[i,j+1,k+1] + fy[i,j+1,k]) * lmd_y/2
+
+@inplacewrapper
+def divergence(double[:,:] out, double[:,:] u, double[:,:] v,
+               double dx, double dy):
+
+
+    cdef double hx2 = 2 * dx
+    cdef double hy2 = 2 * dy
+    cdef int i,j
+    with nogil:
+        for i in prange(1, u.shape[0]-1):
+            for j in range(1, u.shape[1]-1):
+                out[i,j] = (-u[i+1,j]+u[i-1,j])/hx2 \
+                           +(v[i,j-1] - v[i,j+1])/hy2

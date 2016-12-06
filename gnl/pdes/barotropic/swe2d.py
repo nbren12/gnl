@@ -3,9 +3,7 @@
 TODO
 ----
 - The code in barotropic only convection example seems interesting. Replicate it using the tensor notation. Maybe write a test.
-- Manually enter scheme from stechmann and majda TCFD paper using the tensor notation
 - Rename SWE2NonlinearSolver to TensorNonlinearSolver
-- How to do time integration
 
 """
 from itertools import product
@@ -14,6 +12,7 @@ import numpy as np
 from gnl.pdes.grid import ghosted_grid
 from gnl.pdes.timestepping import steps
 from gnl.pdes.tadmor.tadmor_2d import MultiFab
+from gnl.pdes.tadmor.tadmor import divergence
 from gnl.io import NetCDF4Writer
 
 from barotropic import BarotropicSolver
@@ -146,7 +145,6 @@ class SWE2NonlinearSolver(SWE2Solver):
         uc[:] += f*dt
 
     def split_terms(self, uc):
-        from scipy.ndimage import correlate1d
 
         dx, dy = self.geom.dx, self.geom.dy
 
@@ -155,9 +153,11 @@ class SWE2NonlinearSolver(SWE2Solver):
         q = self.ix(uc)
         f = self.ix(fa)
 
-        # compute divergence
-        w = {j:(correlate1d(q['u', j], [1/2/dx, 0, -1/2/dx], origin=0, axis=0)
-                + correlate1d(q['v', j], [1/2/dy, 0, -1/2/dy], origin=0, axis=1))
+        # from scipy.ndimage import correlate1d
+        # w = {j:(correlate1d(q['u', j], [1/2/dx, 0, -1/2/dx], origin=0, axis=0)
+        #         + correlate1d(q['v', j], [1/2/dy, 0, -1/2/dy], origin=0, axis=1))
+        #      for j in range(1,self.ntrunc +1)}
+        w = {j:divergence(q['u', j], q['v',j], dx, dy)
              for j in range(1,self.ntrunc +1)}
 
 
