@@ -6,6 +6,9 @@ TODO
 - Rename SWE2NonlinearSolver to TensorNonlinearSolver
 - study stability of scheme in advective form
 
+CODING TODO
+-----------
+Move boundary condition stuff into geom object
 """
 import logging
 logger = logging.getLogger(__name__)
@@ -107,7 +110,9 @@ class SWE2Solver(BarotropicSolver):
 class SWE2NonlinearSolver(SWE2Solver):
 
     ntrunc = 2
-    def __init__(self):
+    n_ghost = 4
+    bcs = None
+    def __init__(self, sizes):
         "docstring"
         from math import sqrt, pi
         from galerkin import flux_div_t, flux_div_u, sparsify
@@ -122,6 +127,8 @@ class SWE2NonlinearSolver(SWE2Solver):
         self._bt = sparsify(bt)
 
 
+        self.sizes= sizes
+
         # these setting replicate the barotropic only class
         # self._au = [((0, 0,0), 1.0),
         #             ((0, 1,1), 1.0),
@@ -133,6 +140,17 @@ class SWE2NonlinearSolver(SWE2Solver):
         #             ((2, 0, 2), 1.0)]
         # self._bu = []
         # self._bt = []
+
+
+    def init_uc(self):
+        # create initial data
+        uc  = BCMultiFab(sizes=self.sizes,
+                       n_ghost=self.n_ghost,
+                       dof=len(self.inds),
+                       bcs=self.bcs)
+
+        return uc
+
     def flux_spec(self, dim):
         """Specification of the flux  terms
 
@@ -262,22 +280,16 @@ class BetaPlaneMixin(object):
 class BetaPlaneSWESolver(SWE2NonlinearSolver,BetaPlaneMixin):
     def __init__(self,  y):
         "docstring"
-        super(BetaPlaneSWESolver, self).__init__()
-        nx, ny = y.shape
+        super(BetaPlaneSWESolver, self).__init__(y.shape)
 
         # create initial data
-        uc  = BCMultiFab(sizes=[nx, ny],
-                         n_ghost=4, dof=len(self.inds),
-                         bcs=self.bcs)
-
-        yfab = uc.__class__(sizes=uc.sizes,
-                            n_ghost=uc.n_ghost, dof=1)
+        yfab = BCMultiFab(sizes=y.shape, dof=1,
+                          n_ghost=self.n_ghost)
 
         yfab.validview[0] = y
         yfab.exchange()
 
         self.y = yfab
-        self.uc = uc
 
     @property
     def bcs(self):
@@ -322,16 +334,15 @@ def main(plot=False):
     (x,y), (dx,dy) = ghosted_grid([nx, ny], [Lx, Ly], 0)
 
 
-    # tad = SWE2Solver()
-    # tad = SWE2NonlinearSolver()
+    # tad = SWE2NonlinearSolver([nx, ny])
     # tad.geom.dx = dx
     # tad.geom.dy = dx
+    # uc = tad.init_uc()
 
     tad = BetaPlaneSWESolver(y)
     tad.geom.dx = dx
     tad.geom.dy = dx
-
-    uc  = tad.uc
+    uc  = tad.init_uc()
 
     # vortex init conds
     # uc.validview[0] = (y > Ly / 3) * (2 * Ly / 3 > y)
