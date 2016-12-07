@@ -83,7 +83,12 @@ class ChannelSolver(BarotropicSolver):
         return [('wrap', 'even'),
                 ('wrap', 'odd')]
 
+class BetaPlaneMixin(object):
 
+    def coriolis(self, ucv, dt):
+        yv = self.y.ghostview[0]
+        ucv[0] += yv * ucv[1] * dt
+        ucv[1] -= yv * ucv[0] * dt
 
 def main(plot=True):
 

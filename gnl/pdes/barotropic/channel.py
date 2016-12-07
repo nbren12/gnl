@@ -11,27 +11,16 @@ logging.basicConfig(level=logging.INFO)
 from numpy import pi, real
 import numpy as np
 
-from gnl.pdes.barotropic.barotropic import BarotropicSolver, ChannelSolver#, BetaEffectSolver
+from gnl.pdes.barotropic.barotropic import BarotropicSolver, ChannelSolver, BetaPlaneMixin
 from gnl.pdes.fab import BCMultiFab
 from gnl.pdes.timestepping import steps
 from gnl.pdes.grid import ghosted_grid
 
 
-class BetaPlaneSolver(ChannelSolver):
-    def __init__(self, y):
-        "docstring"
-
-        self.y = y
-
-
-    def coriolis(self, ucv, dt):
-        yv = self.y.ghostview[0]
-        ucv[0] += yv * ucv[1] * dt
-        ucv[1] -= yv * ucv[0] * dt
+class BetaPlaneSolver(ChannelSolver, BetaPlaneMixin):
 
     def _extra_corrector(self, ucv, dt):
         self.coriolis(ucv, dt)
-
 
     def onestep(self, uc, t, dt):
         super(BetaPlaneSolver, self).onestep(uc, t, dt)
@@ -63,7 +52,8 @@ def main(plot=False):
     yfab = BCMultiFab(sizes=[nx,ny], n_ghost=uc.n_ghost, dof=1)
     yfab.validview[0] = y
     yfab.exchange()
-    tad = BetaPlaneSolver(yfab)
+    tad = BetaPlaneSolver()
+    tad.y = yfab
     tad.geom.dx = dx
     tad.geom.dy = dx
 
@@ -84,4 +74,4 @@ def main(plot=False):
 
 
 if __name__ == '__main__':
-    main()
+    main(plot=True)

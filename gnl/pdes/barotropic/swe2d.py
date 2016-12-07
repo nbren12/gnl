@@ -13,6 +13,7 @@ logger.setLevel(logging.INFO)
 
 from numpy import pi
 import numpy as np
+from gnl.pdes.fab import BCMultiFab
 from gnl.pdes.grid import ghosted_grid
 from gnl.pdes.timestepping import steps
 from gnl.pdes.tadmor.tadmor_2d import MultiFab
@@ -248,6 +249,68 @@ class SWE2NonlinearSolver(SWE2Solver):
         f = self.split_terms(uc.ghostview)
         uc.ghostview[:] += f*dt/2
 
+class BetaPlaneMixin(object):
+    def coriolis(self, ucv, dt):
+        yv = self.y.ghostview[0]
+
+        q = self.ix(ucv)
+        for i in range(self.ntrunc):
+            q['u', i ] += yv * ucv['v', i] * dt
+            q['v', i ] -= yv * ucv['u', i] * dt
+
+
+class BetaPlaneSWESolver(SWE2NonlinearSolver,BetaPlaneMixin):
+    def __init__(self,  y):
+        "docstring"
+        super(BetaPlaneSWESolver, self).__init__()
+        nx, ny = y.shape
+
+        # create initial data
+        uc  = BCMultiFab(sizes=[nx, ny],
+                         n_ghost=4, dof=len(self.inds),
+                         bcs=self.bcs)
+
+        yfab = uc.__class__(sizes=uc.sizes,
+                            n_ghost=uc.n_ghost, dof=1)
+
+        yfab.validview[0] = y
+        yfab.exchange()
+
+        self.y = yfab
+        self.uc = uc
+
+    @property
+    def bcs(self):
+        out = []
+        for v,_ in self.inds:
+            if v == 'u':
+                # neumann for u
+                out.append(('wrap','even'))
+            elif v =='v':
+                # dirichlet for v
+                out.append(('wrap','odd'))
+            else:
+                out.append(('wrap', 'even'))
+        return out
+
+
+    def coriolis(self, ucv, dt):
+        yv = self.y.ghostview[0]
+
+        q = self.ix(ucv)
+        for i in range(self.ntrunc):
+            q['u', i ] += yv * q['v', i] * dt
+            q['v', i ] -= yv * q['u', i] * dt
+
+    def _extra_corrector(self, ucv, dt):
+        self.coriolis(ucv, dt)
+
+    def onestep(self, uc, t, dt):
+        super(BetaPlaneSWESolver, self).onestep(uc, t, dt)
+        self.coriolis(uc.ghostview, dt/2)
+
+        return uc
+
 def main(plot=False):
 
     # Setup grid
@@ -260,24 +323,33 @@ def main(plot=False):
 
 
     # tad = SWE2Solver()
-    tad = SWE2NonlinearSolver()
+    # tad = SWE2NonlinearSolver()
+    # tad.geom.dx = dx
+    # tad.geom.dy = dx
+
+    tad = BetaPlaneSWESolver(y)
     tad.geom.dx = dx
     tad.geom.dy = dx
 
-    uc  = MultiFab(sizes=[nx, ny], n_ghost=4, dof=len(tad.inds))
+    uc  = tad.uc
 
     # vortex init conds
     # uc.validview[0] = (y > Ly / 3) * (2 * Ly / 3 > y)
     # uc.validview[1]= np.sin(2 * pi * x / Lx) * .3 / (2 * pi / Lx)
 
     # bubble init conds
-    uc.validview[tad.inds.index(('t', 1))] = (((x-Lx/2)**2 + (y-Ly/2)**2  - .5**2 < 0) -.5) * .4
+    uc.validview[tad.inds.index(('t', 1))] = (((x-Lx/2)**2 + (y-Ly/4)**2  - .5**2 < 0) -.5) * .4
 
     from scipy.ndimage import gaussian_filter
     uc.validview[:] = gaussian_filter(uc.validview, [0.0, 1.5, 1.5])
 
     grid = {'x': x[:,0], 'y': y[0,:]}
     writer = NetCDF4Writer(grid, filename="swe2d.nc")
+
+
+
+
+
 
     dt = min(dx, dy) / 4
 
