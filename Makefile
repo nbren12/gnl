@@ -1,2 +1,2 @@
 all:
-	python setup.py build_ext --inplace
+	CC=gcc python setup.py build_ext --inplace
