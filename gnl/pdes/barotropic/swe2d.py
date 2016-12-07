@@ -16,15 +16,14 @@ logger.setLevel(logging.INFO)
 
 from numpy import pi
 import numpy as np
-from gnl.pdes.fab import BCMultiFab
-from gnl.pdes.grid import ghosted_grid
-from gnl.pdes.timestepping import steps
-from gnl.pdes.tadmor.tadmor_2d import MultiFab
-from gnl.io import NetCDF4Writer
-from gnl.pdes.barotropic.swe import *
+from ..fab import BCMultiFab
+from ..grid import ghosted_grid
+from ..timestepping import steps
+from ..tadmor.tadmor_2d import MultiFab, divergence
+from ...io import NetCDF4Writer
+from .barotropic import BarotropicSolver
+from .swe import *
 
-from gnl.pdes.barotropic.barotropic import BarotropicSolver
-from gnl.pdes.tadmor.tadmor import divergence
 
 import numexpr as ne
 
@@ -115,7 +114,7 @@ class SWE2NonlinearSolver(SWE2Solver):
     def __init__(self, sizes):
         "docstring"
         from math import sqrt, pi
-        from galerkin import flux_div_t, flux_div_u, sparsify
+        from .galerkin import flux_div_t, flux_div_u, sparsify
 
         # get coefficients
         au, bu = flux_div_u()
@@ -352,7 +351,7 @@ def main(plot=False):
     # uc.validview[1]= np.sin(2 * pi * x / Lx) * .3 / (2 * pi / Lx)
 
     # bubble init conds
-    # uc.validview[tad.inds.index(('t', 1))] = (((x-Lx/2)**2 + (y-Ly/4)**2  - .5**2 < 0) -.5) * .4
+    # uc.validview[tad.inds.index(('t', 1))] = (((x-Lx/2)**2 + (y-Ly/4)**2  - .5**2 < 0) -.5) * .3
 
 
     # vortex conditions
@@ -361,6 +360,7 @@ def main(plot=False):
     q = tad.ix(uc.validview)
     q['u', 0] = 2*x/ L**2* psi
     q['v', 0] = -2*y/L**2 * psi
+    q['t', 1] = psi
 
     from scipy.ndimage import gaussian_filter
     uc.validview[:] = gaussian_filter(uc.validview, [0.0, 1.5, 1.5])
@@ -377,13 +377,6 @@ def main(plot=False):
 
     if plot:
         import pylab as pl
-        import os
-
-        try:
-            os.mkdir("_frames")
-        except:
-            pass
-        pl.ion()
 
     iframe = 0
     for i, (t, uc) in enumerate(steps(tad.onestep, uc, dt, [0.0, 1000 * dt])):
@@ -398,7 +391,6 @@ def main(plot=False):
                 # pl.contour(uc.validview[tad.inds.index(('t', 1))], np.linspace(-1,2.5,11), colors='k')
                 pl.pcolormesh(uc.validview[tad.inds.index(('u', 1))], vmin=-.5, vmax=1, cmap='YlGnBu_r')
                 pl.colorbar()
-                pl.savefig("_frames/%04d.png"%iframe)
                 iframe +=1
                 pl.pause(.01)
 
