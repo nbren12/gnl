@@ -20,7 +20,7 @@ def _extrap(u, g):
 def _wraps(u, g):
     return u[-g:,...]
 
-def fillboundary(u, bcs=None, g=1):
+def fillboundary(u, axes=[1,2], bcs=None, g=1):
     """Fill boundary cells in u
 
     Parameters
@@ -55,12 +55,9 @@ def fillboundary(u, bcs=None, g=1):
                   'wrap': _wraps}
 
     if bcs is None:
-        bcs = [['wrap', 'wrap']]*u.ndim
+        bcs = [['wrap', 'wrap']]*len(axes)
 
-    if len(bcs) != u.ndim:
-        raise ValueError("Length of bcs must equal u.ndim")
-
-    for axis, bc in enumerate(bcs):
+    for axis, bc in zip(axes, bcs):
         uv = u.swapaxes(axis, 0)
         in_views = [uv[g:-g,...], uv[-g-1:g-1:-1,...]]
         out_views = [uv[:g,...], uv[-1:-g-1:-1,...]]
@@ -75,7 +72,7 @@ def fillboundary(u, bcs=None, g=1):
     return u
 
 
-def periodic_bc(u, g=2, axes=(1, )):
+def periodic_bc(u, g=2, axes=(1, 2)):
     """periodic bc in arbitrary dimensions
 
     Provided for convenience
@@ -88,10 +85,7 @@ def periodic_bc(u, g=2, axes=(1, )):
     >>> x.__array_interface__['data'][0] == _.__array_interface__['data'][0]
     True
     """
-    bcs = [(None, None)] *u.ndim
-    for ax in axes:
-        bcs[ax] = ('wrap', 'wrap')
-    return fillboundary(u, bcs, g)
+    return fillboundary(u, axes=axes, g=g)
 
 if __name__ == "__main__":
     import doctest
