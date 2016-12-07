@@ -95,13 +95,7 @@ class Tadmor2D(Tadmor2DBase):
     geom = Geom()
 
     def central_scheme(self, vec, dx, dy, dt):
-        if isinstance(vec, MultiFab):
-            vec.exchange()
-            uc = vec.ghostview
-            uc[:] = super(Tadmor2D, self).central_scheme(uc, dx, dy, dt)
-            return vec
-        else:
-            fab = MultiFab(data=vec, n_ghost=self.geom.n_ghost)
-            fab.exchange()
-            uc = fab.ghostview
-            return super(Tadmor2D, self).central_scheme(uc, dx, dy, dt)
+        vec.exchange()
+        uc = vec.ghostview
+        super(Tadmor2D, self).central_scheme(uc, dx, dy, dt)
+        return vec

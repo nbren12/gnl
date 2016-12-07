@@ -57,4 +57,5 @@ class BCMultiFab(MultiFab):
             bcarg = [[b]*2 for b in bc]
             fillboundary(self.ghostview[i],
                          bcs=bcarg,
+                         axes=[0,1],
                          g=self.n_ghost)
