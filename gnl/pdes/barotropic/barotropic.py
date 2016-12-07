@@ -97,8 +97,8 @@ def main(plot=True):
 
     # Setup grid
     g = 4
-    nx, ny = 200, 200
-    Lx, Ly = pi, pi
+    nx, ny = 200, 50
+    Lx, Ly = 26, 26/4
 
     (x, y), (dx, dy) = ghosted_grid([nx, ny], [Lx, Ly], 0)
 

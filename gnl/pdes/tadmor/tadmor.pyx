@@ -1,4 +1,4 @@
-#cython: boundscheck=False
+##cython: boundscheck=False
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 from cython.parallel cimport prange
@@ -50,10 +50,10 @@ def _slopes(uy, uc, axis=-1, tht=None, limiter=None):
     """
 
     cdef int j, i, k, neq, n1, n2
-    neq, n1, n2 = uc.shape
+    uc1 = uc.swapaxes(axis, -1);
 
-
-    cdef double[:,:,:] ucv = uc.swapaxes(axis, -1);
+    neq, n1, n2 = uc1.shape
+    cdef double[:,:,:] ucv = uc1
     cdef double[:,:,:] uyv = uy.swapaxes(axis, -1);
 
 
@@ -61,7 +61,7 @@ def _slopes(uy, uc, axis=-1, tht=None, limiter=None):
         tht = np.ones(neq)*2.0
 
     if limiter is None:
-        limiter = np.zeros(neq, dtype=np.int32)
+        limiter = np.ones(neq, dtype=np.int32)
 
     cdef double[:] thtv = tht
     cdef int[:] limv = limiter
