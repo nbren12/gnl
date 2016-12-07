@@ -2,6 +2,13 @@ import numpy as np
 from .bc import periodic_bc, fillboundary
 
 class MultiFab(object):
+    """
+    >>> a = MultiFab(sizes=[10,10], dof=1, n_ghost=2)
+    >>> a.view(1).shape
+    (1, 12, 12)
+    >>> a.sizes
+    (10, 10)
+    """
     def __init__(self, data=None, sizes=None, n_ghost=0, dof=None):
         "docstring"
 
@@ -15,6 +22,10 @@ class MultiFab(object):
             raise ValueError("Need either data or sizes")
 
         self.n_ghost = n_ghost
+
+    @property
+    def sizes(self):
+        return self.view(0).shape[1:]
 
     @property
     def dof(self):
@@ -32,11 +43,12 @@ class MultiFab(object):
     def ghostview(self):
         return self.data
 
-
     def view(self, g):
         ng = self.n_ghost
-        return self.data[ng-g:-ng-g]
-
+        if g < ng:
+            return self.data[:, ng-g:-ng+g, ng-g:-ng+g]
+        else:
+            return self.data
 
 class BCMultiFab(MultiFab):
     def __init__(self, bcs=None, **kwargs):
