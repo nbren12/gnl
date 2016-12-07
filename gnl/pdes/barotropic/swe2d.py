@@ -333,6 +333,9 @@ def main(plot=False):
 
     (x,y), (dx,dy) = ghosted_grid([nx, ny], [Lx, Ly], 0)
 
+    x-= Lx/2
+    y-= Ly/2
+
 
     # tad = SWE2NonlinearSolver([nx, ny])
     # tad.geom.dx = dx
@@ -349,7 +352,15 @@ def main(plot=False):
     # uc.validview[1]= np.sin(2 * pi * x / Lx) * .3 / (2 * pi / Lx)
 
     # bubble init conds
-    uc.validview[tad.inds.index(('t', 1))] = (((x-Lx/2)**2 + (y-Ly/4)**2  - .5**2 < 0) -.5) * .4
+    # uc.validview[tad.inds.index(('t', 1))] = (((x-Lx/2)**2 + (y-Ly/4)**2  - .5**2 < 0) -.5) * .4
+
+
+    # vortex conditions
+    L= 1
+    psi = np.exp(-(x**2 + y**2)/L**2)
+    q = tad.ix(uc.validview)
+    q['u', 0] = 2*x/ L**2* psi
+    q['v', 0] = -2*y/L**2 * psi
 
     from scipy.ndimage import gaussian_filter
     uc.validview[:] = gaussian_filter(uc.validview, [0.0, 1.5, 1.5])
