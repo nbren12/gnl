@@ -11,17 +11,13 @@ from cython.parallel cimport prange, parallel
 cimport openmp
 from libc.stdio cimport printf
 
-cdef nemult(outpi, double a, bi, ci):
+cdef void nemult(double[:,:]outp, double a, double[:,:]b, double[:,:]c) nogil:
 
-    cdef double[:] outp = outpi.ravel()
-    cdef double[:] c = ci.ravel()
-    cdef double[:] b = bi.ravel()
-
-
-    cdef int i
+    cdef int i, j
 
     for i in prange(outp.shape[0], nogil=True):
-        outp[i]  += a * b[i] *c[i]
+        for j in range(outp.shape[1]):
+            outp[i,j]  += a * b[i,j] *c[i,j]
 
 
 class ixer(object):
