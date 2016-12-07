@@ -41,11 +41,11 @@ class BetaPlaneSolver(ChannelSolver):
 
 
 
-def main(plot=True):
+def main(plot=False):
 
     # Setup grid
     g = 4
-    nx, ny = 200, 50
+    nx, ny = 1000, 250
     Lx, Ly = 26, 26 * (ny/nx)
 
     (x, y), (dx, dy) = ghosted_grid([nx, ny], [Lx, Ly], 0)

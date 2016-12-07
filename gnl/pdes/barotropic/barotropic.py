@@ -28,27 +28,19 @@ class BarotropicSolver(Tadmor2D):
         self.pressure_solver = self.pres_solver_cls(
             uc.validview.shape[1:], [self.geom.dx, self.geom.dy])
 
-    def fx(self, uc):
+    def fx(self, f, uc):
         u = uc[0]
         v = uc[1]
-
-        f = np.empty_like(uc)
 
         for i in range(f.shape[0]):
             f[i] = u * uc[i]
 
-        return f
-
-    def fy(self, uc):
+    def fy(self, f, uc):
         u = uc[0]
         v = uc[1]
 
-        f = np.empty_like(uc)
-
         for i in range(f.shape[0]):
             f[i] = v * uc[i]
-
-        return f
 
     def advection_step(self, uc, dt):
         self.central_scheme(uc, self.geom.dx, self.geom.dy, dt)

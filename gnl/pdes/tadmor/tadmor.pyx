@@ -1,10 +1,9 @@
-#cython: boundscheck=False
+#cython: boundscheck=False, wraparound=False, nonecheck=False
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 from cython.parallel cimport prange
 
 cimport cython
-cimport numpy as np
 
 
 def inplacewrapper(fun):
@@ -37,7 +36,6 @@ cdef double minmod(double a,double b,double c) nogil:
     else:
         return 0.0
 
-@inplacewrapper
 def _slopes(uy, uc, axis=-1, tht=None, limiter=None):
     """Calculate slopes
 
@@ -69,8 +67,8 @@ def _slopes(uy, uc, axis=-1, tht=None, limiter=None):
 
     cdef double left, cent, right
     with nogil:
-        for j in range(neq):
-            for i in prange(n1):
+        for j in prange(neq):
+            for i in range(n1):
                 for k in range(1, n2 - 1):
                     if limv[j]:
                         left = thtv[j] * (ucv[j, i, k + 1] - ucv[j, i, k])
@@ -81,29 +79,7 @@ def _slopes(uy, uc, axis=-1, tht=None, limiter=None):
                         cent = (ucv[j, i, k + 1] - ucv[j, i, k - 1]) / 2
                         uyv[j, i, k] = cent
 
-@inplacewrapper
-def _stagger_avg(avg, uci):
-    uxi = _slopes(uci, axis=1)
-    uyi = _slopes(uci, axis=2)
 
-    cdef double[:,:,:] ux = uxi
-    cdef double[:,:,:] uc = uci
-    cdef double[:,:,:] uy = uyi
-    cdef double[:,:,:] out = avg
-
-    cdef int i, j, k
-    with nogil:
-        for i in range(ux.shape[0]):
-            for j in prange(ux.shape[1]-1):
-                for k in range(ux.shape[2]-1):
-                    out[i,j+1,k+1] = (uc[i,j,k] + uc[i,j+1,k] + uc[i,j,k+1] + uc[i,j+1,k+1])/4 \
-                                +((ux[i,j,k] - ux[i,j+1,k]) + (ux[i,j,k+1] -ux[i,j+1,k+1])
-                                + (uy[i,j,k] - uy[i,j,k+1]) +(uy[i,j+1,k] - uy[i,j+1,k+1])
-                                ) / 16
-
-
-
-@inplacewrapper
 @cython.boundscheck(False)
 def _corrector_step(double[:,:,:] out, double[:,:,:] fx ,
                     double[:,:,:] fy, double lmd_x, double lmd_y):
@@ -111,10 +87,10 @@ def _corrector_step(double[:,:,:] out, double[:,:,:] fx ,
     cdef int i, j, k
     with nogil:
 
-        for i in range(out.shape[0]):
-            for j in prange(out.shape[1]-1):
+        for i in prange(out.shape[0]):
+            for j in range(out.shape[1]-1):
                 for k in range(out.shape[2]-1):
-                    out[i,j+1,k+1] = (fx[i,j,k] - fx[i,j+1,k]
+                    out[i,j+1,k+1] += (fx[i,j,k] - fx[i,j+1,k]
                                     - fx[i,j+1,k+1] + fx[i,j,k+1]) * lmd_x/2 \
                                     +(fy[i,j,k]-fy[i,j,k+1]
                                     -fy[i,j+1,k+1] + fy[i,j+1,k]) * lmd_y/2
@@ -132,3 +108,112 @@ def divergence(double[:,:] out, double[:,:] u, double[:,:] v,
             for j in range(1, u.shape[1]-1):
                 out[i,j] = (-u[i+1,j]+u[i-1,j])/hx2 \
                            +(v[i,j-1] - v[i,j+1])/hy2
+
+def _roll2d(u):
+    return np.roll(np.roll(u, -1, axis=1), -1, axis=2)
+
+cdef class Tadmor2DBase:
+    cdef int initialized
+
+
+    def __cinit__(self):
+        self.initialized = False
+
+    def init(self, uc):
+        self.ustag = uc.copy()
+        self.ux = uc.copy()
+        self.uy = uc.copy()
+        self.fxa = uc.copy()
+        self.fya = uc.copy()
+        self.initialized = True
+
+    def fx(self, fx, uc):
+        raise NotImplementedError
+
+    def fy(self, fy, uc):
+        raise NotImplementedError
+
+    def _extra_corrector(self, uc, dt):
+        pass
+
+    def _single_step(self, uc, dx, dy, dt):
+
+        ux = np.zeros_like(uc)
+        uy = np.zeros_like(uc)
+        uc = uc.copy()
+        lmd_x = dt / dx
+        lmd_y = dt / dy
+
+        self.ustag[:] = 0
+        self.fxa[:] = 0
+        self.fya[:] = 0
+        self.ux[:] = 0
+        self.uy[:] = 0
+
+        self._stagger_avg(self.ustag, uc)
+
+        # predictor: mid-time-step pointewise values at cell-center
+        # Eq. (1.1) in Jiand and Tadmor
+        self.fx(self.fxa, uc)
+        self.fy(self.fya, uc)
+        _slopes(self.ux, self.fxa, axis=1)
+        _slopes(self.uy, self.fya, axis=2)
+        self._extra_corrector(uc, dt/2)
+        uc -= lmd_x / 2 * self.ux + lmd_y / 2 * self.uy
+
+        # corrector
+        # Eq (1.2) in Jiang and Tadmor
+        # self.fill_boundaries(uc)
+        self.fxa[:] = 0
+        self.fya[:] = 0
+        self.fx(self.fxa, uc)
+        self.fy(self.fya, uc)
+        _corrector_step(self.ustag, self.fxa, self.fya, lmd_x, lmd_y)
+
+        return self.ustag
+
+    def central_scheme(self, uc, dx, dy, dt):
+        """ One timestep of centered scheme
+
+
+        Parameters
+        ----------
+        fx : callable
+            fx(u) calculates the numeric flux in the x-direction
+        uc: (neq, n)
+            The state vector on the centered grid
+        dx: float
+            size of grid cell
+        dt: float
+            Time step
+
+        Returns
+        -------
+        out: (neq, n)
+        state vector on centered grid
+        """
+
+        if not self.initialized:
+            self.init(uc)
+
+        self._stagger_avg(uc, _roll2d(self._single_step(uc, dx, dy, dt)))
+        return uc
+
+    cdef _stagger_avg(self, avg, uci):
+        _slopes(self.ux, uci, axis=1)
+        _slopes(self.uy, uci, axis=2)
+
+        cdef double[:,:,:] ux = self.ux
+        cdef double[:,:,:] uc = uci
+        cdef double[:,:,:] uy = self.uy
+        cdef double[:,:,:] out = avg
+
+        cdef int i, j, k
+        with nogil:
+            for i in prange(ux.shape[0]):
+                for j in range(ux.shape[1]-1):
+                    for k in range(ux.shape[2]-1):
+                        out[i,j+1,k+1] = (uc[i,j,k] + uc[i,j+1,k] + uc[i,j,k+1] + uc[i,j+1,k+1])/4 \
+                                        +((ux[i,j,k] - ux[i,j+1,k]) + (ux[i,j,k+1] -ux[i,j+1,k+1])
+                                        + (uy[i,j,k] - uy[i,j,k+1]) +(uy[i,j+1,k] - uy[i,j+1,k+1])
+                                        ) / 16
