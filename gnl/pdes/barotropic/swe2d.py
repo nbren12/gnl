@@ -7,6 +7,10 @@ TODO
 - study stability of scheme in advective form
 
 """
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 from numpy import pi
 import numpy as np
 from gnl.pdes.grid import ghosted_grid
@@ -18,7 +22,22 @@ from gnl.pdes.barotropic.swe import *
 from gnl.pdes.barotropic.barotropic import BarotropicSolver
 from gnl.pdes.tadmor.tadmor import divergence
 
-from gnl.pdes.barotropic.swe import nemult
+import numexpr as ne
+
+def nemult(out, val, a, b, cache={}):
+    """
+    nemult(fa[i], val, uc[j] , uc[k])
+    """
+    try:
+        intermediate = cache[out.shape]
+    except KeyError:
+        logger.info("Allocating intermediate array for nemult")
+        intermediate = np.empty_like(out)
+        cache[out.shape] = intermediate
+
+    ne.evaluate("val * a* b", out=intermediate)
+    out[:] += intermediate
+
 
 class ixer(object):
     def __init__(self, uc, inds):
