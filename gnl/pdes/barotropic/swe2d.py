@@ -143,6 +143,18 @@ class SWE2Solver(BarotropicSolver):
             yield get_name(*namet), ('x', 'y'), uc.validview[i]
 
 class SWE2NonlinearSolver(SWE2Solver):
+    """Shallow water wave solver with nonlinear
+
+    The coefficients are obtained from a galerkin projection procedure, which is carried out using numerical quadrature in galerkin.py.
+
+    Notes
+    -----
+
+    This class does not currently work with bases other than the sin basis. The
+    convention in the notes is to express the tempearture in terms of phi''(z)
+    where phi(z) is the vertical velocity mode. Therefore the basis functions
+    for temperature have the opposite sign as velocity. 
+    """
 
     ntrunc = 2
     n_ghost = 4
@@ -215,6 +227,9 @@ class SWE2NonlinearSolver(SWE2Solver):
             i1 = self.inds.index(('t', i))
             j1 = self.inds.index((adv, j))
             k1 = self.inds.index(('t', k))
+
+            # the -val is because we want temperature to have the right sign
+            # see the note in the docstring of this class.
             out.append(((i1, j1, k1), val))
 
         return out
@@ -242,6 +257,8 @@ class SWE2NonlinearSolver(SWE2Solver):
             i1 = self.inds.index(('t', i))
             j1 = j
             k1 = self.inds.index(('t', k))
+            # the -val is because we want temperature to have the right sign
+            # see the note in the docstring of this class.
             out.append(((i1, j1, k1), val))
 
         return out
@@ -262,10 +279,12 @@ class SWE2NonlinearSolver(SWE2Solver):
         for (i, j, k), val in self.flux_spec(dim):
             nemult(fa[i], val, uc[j] , uc[k])
 
+        # TODO specify these terms using a linear_spec property
+        # like we do for the nonlinear terms
         for i in range(1,self.ntrunc+1):
-            f['t', i] -= q[adv, i]
+            f['t', i] += q[adv, i]
             f['t', i] /= i * i
-            f[adv, i] -= q['t', i]
+            f[adv, i] += q['t', i]
 
     def _extra_corrector(self, uc, dt):
         super(SWE2NonlinearSolver, self)._extra_corrector(uc, dt)
@@ -427,10 +446,10 @@ def main(plot=False):
                 # pl.contourf(uc.validview[tad.inds.index(('t', 1))], np.linspace(-1,2.5,11), cmap='YlGnBu')
                 # pl.colorbar()
                 # pl.contour(uc.validview[tad.inds.index(('t', 1))], np.linspace(-1,2.5,11), colors='k')
-                pl.pcolormesh(uc.validview[tad.inds.index(('u', 1))], vmin=-.5, vmax=1, cmap='YlGnBu_r')
+                pl.pcolormesh(uc.validview[tad.inds.index(('t', 1))], vmin=-.5, vmax=1, cmap='YlGnBu_r')
                 pl.colorbar()
                 iframe +=1
                 pl.pause(.01)
 
 if __name__ == '__main__':
-    main(plot=False)
+    main(plot=True)
