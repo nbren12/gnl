@@ -60,6 +60,9 @@ class SWE2Solver(BarotropicSolver):
     """
     inds = [('u',0), ('v',0) ,('u',1), ('u',2), ('v', 1), ('v', 2), ('t',1), ('t', 2)]
 
+    u_nums = [0, 1, 2]
+    t_nums = [1, 2]
+
     def ix(self, uc):
         return ixer(uc, self.inds)
 
@@ -101,7 +104,40 @@ class SWE2Solver(BarotropicSolver):
     def fy(self, fa, uc):
         return self.fx(fa, uc, dim='y')
 
+
+    @property
+    def ncvars_stacked(self, uc):
+        variables = list(self.inds)
+
+        q = self.ix(uc.validview)
+        for v in ['u', 'v']:
+            catme = []
+            for i in self.u_nums:
+                catme.append(q[v, i][None,...])
+                variables.remove((v, i))
+            yield v, ('m', 'x', 'y'), np.concatenate(catme, axis=0)
+
+        catme = []
+        for i in self.t_nums:
+            catme.append(q['t', i][None,...])
+            variables.remove(('t', i))
+        yield 't', ('n', 'x', 'y'), np.concatenate(catme, axis=0)
+
+        for namet, i in variables:
+            if namet not in ['u', 'v', 't']:
+                yield namet, ('x', 'y'), uc.validview[i]
+
+
     def ncvars(self, uc):
+        """Yields a tuples of names, dimensions, and data
+
+        this list is used for as input to NetCDF4Writer.
+
+        Notes
+        -----
+        see ncvars_stacked for outut which stacks the baroclinic modes into 3d
+        netcdf variables.
+        """
         get_name = lambda name, m: "{}{}".format(name, m)
         for i, namet in enumerate(self.inds):
             yield get_name(*namet), ('x', 'y'), uc.validview[i]
@@ -365,7 +401,9 @@ def main(plot=False):
     from scipy.ndimage import gaussian_filter
     uc.validview[:] = gaussian_filter(uc.validview, [0.0, 1.5, 1.5])
 
-    grid = {'x': x[:,0], 'y': y[0,:]}
+    grid = {'x': x[:,0], 'y': y[0,:],
+            'm': tad.u_nums,
+            'n': tad.t_nums}
     writer = NetCDF4Writer(grid, filename="swe2d.nc")
 
 
