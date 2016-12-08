@@ -32,7 +32,7 @@ class NetCDF4Writer(object):
 
         # Create dimension information
         for k in grid:
-            self._f.createDimension(k, grid[k].shape[0])
+            self._f.createDimension(k, len(grid[k]))
             gridvar = self._f.createVariable(k, 'f4', (k,))
             gridvar[:]  = grid[k]
 
