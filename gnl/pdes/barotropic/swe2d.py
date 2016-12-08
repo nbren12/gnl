@@ -377,45 +377,61 @@ class BetaPlaneSWESolver(SWE2NonlinearSolver,BetaPlaneMixin):
 
         return uc
 
-def main(plot=False):
-
-    # Setup grid
-    g = 4
-    nx, ny = 1000, 250
-    nx, ny = 512, 128
-    Lx, Ly = 26, 26 * (ny/nx)
-
-    (x,y), (dx,dy) = ghosted_grid([nx, ny], [Lx, Ly], 0)
-
-    x-= Lx/2
-    y-= Ly/2
+def main(plot=False, problem='dam_break'):
 
 
-    # tad = SWE2NonlinearSolver([nx, ny])
-    # tad.geom.dx = dx
-    # tad.geom.dy = dx
-    # uc = tad.init_uc()
-
-    tad = BetaPlaneSWESolver(y)
-    tad.geom.dx = dx
-    tad.geom.dy = dx
-    uc  = tad.init_uc()
-
-    # vortex init conds
-    # uc.validview[0] = (y > Ly / 3) * (2 * Ly / 3 > y)
-    # uc.validview[1]= np.sin(2 * pi * x / Lx) * .3 / (2 * pi / Lx)
-
-    # bubble init conds
-    # uc.validview[tad.inds.index(('t', 1))] = (((x-Lx/2)**2 + (y-Ly/4)**2  - .5**2 < 0) -.5) * .3
 
 
-    # vortex conditions
-    L= 1
-    psi = np.exp(-(x**2 + y**2)/L**2)
-    q = tad.ix(uc.validview)
-    q['u', 0] = 2*x/ L**2* psi
-    q['v', 0] = -2*y/L**2 * psi
-    q['t', 1] = psi
+    if problem == 'beta_plane':
+        # Setup grid
+        g = 4
+        nx, ny = 1000, 250
+        nx, ny = 512, 128
+        Lx, Ly = 26, 26 * (ny/nx)
+
+        (x,y), (dx,dy) = ghosted_grid([nx, ny], [Lx, Ly], 0)
+
+        x-= Lx/2
+        y-= Ly/2
+
+        tad = BetaPlaneSWESolver(y)
+        tad.geom.dx = dx
+        tad.geom.dy = dx
+        uc  = tad.init_uc()
+
+        # vortex init conds
+        uc.validview[0] = (y > Ly / 3) * (2 * Ly / 3 > y)
+        uc.validview[1]= np.sin(2 * pi * x / Lx) * .3 / (2 * pi / Lx)
+
+        # vortex conditions
+        L= 1
+        psi = np.exp(-(x**2 + y**2)/L**2)
+        q = tad.ix(uc.validview)
+        q['u', 0] = 2*x/ L**2* psi
+        q['v', 0] = -2*y/L**2 * psi
+        q['t', 1] = -psi
+
+
+    elif problem == 'dam_break':
+        ## Radial dam break problem
+        nx, ny = 200, 200
+        Lx, Ly = pi, pi
+
+        (x,y), (dx,dy) = ghosted_grid([nx, ny], [Lx, Ly], 0)
+        x-= Lx/2
+        y-= Ly/2
+
+        tad = SWE2NonlinearSolver([nx, ny])
+        tad.geom.dx = dx
+        tad.geom.dy = dx
+        uc = tad.init_uc()
+
+        t0 = ((x**2 + y**2  - .5**2 < 0)) * .5
+
+
+        # bubble init conds
+        uc.validview[tad.inds.index(('t', 1))] = -t0
+
 
     from scipy.ndimage import gaussian_filter
     uc.validview[:] = gaussian_filter(uc.validview, [0.0, 1.5, 1.5])
@@ -446,7 +462,7 @@ def main(plot=False):
                 # pl.contourf(uc.validview[tad.inds.index(('t', 1))], np.linspace(-1,2.5,11), cmap='YlGnBu')
                 # pl.colorbar()
                 # pl.contour(uc.validview[tad.inds.index(('t', 1))], np.linspace(-1,2.5,11), colors='k')
-                pl.pcolormesh(uc.validview[tad.inds.index(('t', 1))], vmin=-.5, vmax=1, cmap='YlGnBu_r')
+                pl.pcolormesh(-uc.validview[tad.inds.index(('t', 1))], vmin=-.5, vmax=1, cmap='YlGnBu_r')
                 pl.colorbar()
                 iframe +=1
                 pl.pause(.01)
