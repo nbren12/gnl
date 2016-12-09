@@ -72,7 +72,7 @@ def flux_div_u():
     # flux terms in u equation no need to invert using mass matrix
     l, k, m = np.mgrid[0:3, 0:3, 0:3]
     flux_tensor = Au(l, k, m)
-    div_tensor = -Bu(l, k, m)
+    div_tensor = +Bu(l, k, m)
 
     div_tensor[:,0,:] = 0
 
@@ -84,9 +84,9 @@ def flux_div_t():
     l, k, m = np.mgrid[0:3, 0:3, 0:3]
     flux_tensor = At(l, k, m)
 
-    div_tensor = -At(l, k, m) - Bt(l, k, m)
+    div_tensor = +At(l, k, m) + Bt(l, k, m)
     l[0, ...] = 1.0
-    div_tensor/= l**2
+    div_tensor /= l**2
 
     div_tensor[:,0,:] = 0
 

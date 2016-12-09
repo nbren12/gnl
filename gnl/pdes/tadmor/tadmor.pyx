@@ -96,7 +96,7 @@ def _corrector_step(double[:,:,:] out, double[:,:,:] fx ,
                                     -fy[i,j+1,k+1] + fy[i,j+1,k]) * lmd_y/2
 
 @inplacewrapper
-def divergence(double[:,:] out, double[:,:] u, double[:,:] v,
+def convergence(double[:,:] out, double[:,:] u, double[:,:] v,
                double dx, double dy):
 
 

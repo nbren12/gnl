@@ -19,7 +19,7 @@ import numpy as np
 from ..fab import BCMultiFab
 from ..grid import ghosted_grid
 from ..timestepping import steps
-from ..tadmor.tadmor_2d import MultiFab, divergence
+from ..tadmor.tadmor_2d import MultiFab, convergence
 from ...io import NetCDF4Writer
 from .barotropic import BarotropicSolver
 from .swe import *
@@ -304,7 +304,7 @@ class SWE2NonlinearSolver(SWE2Solver):
         # w = {j:(correlate1d(q['u', j], [1/2/dx, 0, -1/2/dx], origin=0, axis=0)
         #         + correlate1d(q['v', j], [1/2/dy, 0, -1/2/dy], origin=0, axis=1))
         #      for j in range(1,self.ntrunc +1)}
-        w = {j:divergence(q['u', j], q['v',j], dx, dy)
+        w = {j:convergence(q['u', j], q['v',j], dx, dy)
              for j in range(1,self.ntrunc +1)}
 
         for (i,j,k), val in self.source_spec():
@@ -399,22 +399,24 @@ def main(plot=False, problem='dam_break'):
         tad.geom.dy = dx
         uc  = tad.init_uc()
 
-        # vortex init conds
-        uc.validview[0] = (y > Ly / 3) * (2 * Ly / 3 > y)
-        uc.validview[1]= np.sin(2 * pi * x / Lx) * .3 / (2 * pi / Lx)
+        # # vortex init conds
+        # uc.validview[0] = (y > Ly / 3) * (2 * Ly / 3 > y)
+        # uc.validview[1]= np.sin(2 * pi * x / Lx) * .3 / (2 * pi / Lx)
 
         # vortex conditions
         L= 1
-        psi = np.exp(-(x**2 + y**2)/L**2)
+        psi = np.exp(-(x**2 + y**2)/(L)**2/2)
         q = tad.ix(uc.validview)
-        q['u', 0] = 2*x/ L**2* psi
-        q['v', 0] = -2*y/L**2 * psi
-        q['t', 1] = -psi
+        q['u', 0] = x/ L**2* psi
+        q['v', 0] = -y/L**2 * psi
+        q['t', 1] = -psi/5
+
+        tend = 5
 
 
     elif problem == 'dam_break':
         ## Radial dam break problem
-        nx, ny = 200, 200
+        nx, ny = 256, 256
         Lx, Ly = pi, pi
 
         (x,y), (dx,dy) = ghosted_grid([nx, ny], [Lx, Ly], 0)
@@ -431,6 +433,8 @@ def main(plot=False, problem='dam_break'):
 
         # bubble init conds
         uc.validview[tad.inds.index(('t', 1))] = -t0
+
+        tend = pi
 
 
     from scipy.ndimage import gaussian_filter
@@ -452,7 +456,7 @@ def main(plot=False, problem='dam_break'):
         import pylab as pl
 
     iframe = 0
-    for i, (t, uc) in enumerate(steps(tad.onestep, uc, dt, [0.0, 1000 * dt])):
+    for i, (t, uc) in enumerate(steps(tad.onestep, uc, dt, [0.0, tend])):
         if (np.any(np.isnan(uc.validview))):
             raise FloatingPointError("NaN in solution array...quitting")
         if i % 20 == 0:
