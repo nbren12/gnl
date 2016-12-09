@@ -66,43 +66,33 @@ class SWE2Solver(BarotropicSolver):
     def ix(self, uc):
         return ixer(uc, self.inds)
 
+
+    def fy(self, fa, uc):
+        return self.fx(fa, uc, dim='y')
+
+
     def fx(self, fa, uc, dim='x'):
 
-        fa[:] = 0.0
-
-        q = self.ix(uc)
-        f = self.ix(fa)
+        fa[:] = 0
 
         if dim == 'x':
             adv = 'u'
         else:
             adv = 'v'
 
+        # provide access to variables by name
+        q = self.ix(uc)
+        f = self.ix(fa)
 
-        # barotropic nonlinearity
-        for i in range(3):
-            f['u', 0] += q[adv, i] * q['u', i]
-            f['v', 0] += q[adv, i] * q['v', i]
+        for (i, j, k), val in self.flux_spec(dim):
+            nemult(fa[i], val, uc[j] , uc[k])
 
-        # Advection by barotropic flow
-        for v, i in product(['u', 'v'], range(1,3)):
-            f[v, i] += q[adv, 0] * q[v, i]
-
-        for  i in range(1,3):
-            f['t', i] += q[adv, 0] * q['t', i] * i*i
-
-        f[adv, 1] -= q['t', 1]
-        f[adv, 2] -= q['t', 2]
-
-        # f['v', 1] -= 0
-        # f['v', 2] -= 0
-
-        f['t', 1] -= q[adv, 1]
-        f['t', 2] -= q[adv, 2]/4
-
-
-    def fy(self, fa, uc):
-        return self.fx(fa, uc, dim='y')
+        # TODO specify these terms using a linear_spec property
+        # like we do for the nonlinear terms
+        for i in range(1,self.ntrunc+1):
+            f['t', i] += q[adv, i]
+            f['t', i] /= i * i
+            f[adv, i] += q['t', i]
 
 
     @property
@@ -263,28 +253,6 @@ class SWE2NonlinearSolver(SWE2Solver):
 
         return out
 
-    def fx(self, fa, uc, dim='x'):
-
-        fa[:] = 0
-
-        if dim == 'x':
-            adv = 'u'
-        else:
-            adv = 'v'
-
-        # provide access to variables by name
-        q = self.ix(uc)
-        f = self.ix(fa)
-
-        for (i, j, k), val in self.flux_spec(dim):
-            nemult(fa[i], val, uc[j] , uc[k])
-
-        # TODO specify these terms using a linear_spec property
-        # like we do for the nonlinear terms
-        for i in range(1,self.ntrunc+1):
-            f['t', i] += q[adv, i]
-            f['t', i] /= i * i
-            f[adv, i] += q['t', i]
 
     def _extra_corrector(self, uc, dt):
         super(SWE2NonlinearSolver, self)._extra_corrector(uc, dt)
