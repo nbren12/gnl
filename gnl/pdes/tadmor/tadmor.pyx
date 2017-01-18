@@ -217,3 +217,103 @@ cdef class Tadmor2DBase:
                                         +((ux[i,j,k] - ux[i,j+1,k]) + (ux[i,j,k+1] -ux[i,j+1,k+1])
                                         + (uy[i,j,k] - uy[i,j,k+1]) +(uy[i,j+1,k] - uy[i,j+1,k+1])
                                         ) / 16
+
+
+
+
+cdef class Tadmor1DBase:
+    cdef int initialized
+
+
+    def __cinit__(self):
+        self.initialized = False
+
+    def init(self, uc):
+        self.ustag = uc.copy()
+        self.ux = uc.copy()
+        self.fxa = uc.copy()
+        self.initialized = True
+
+    def fx(self, fx, uc):
+        raise NotImplementedError
+
+    def _extra_corrector(self, uc, dt):
+        pass
+
+    def _single_step(self, uc, dx,dt):
+
+        ux = np.zeros_like(uc)
+        uc = uc.copy()
+        lmd_x = dt / dx
+
+        self.ustag[:] = 0
+        self.fxa[:] = 0
+        self.ux[:] = 0
+
+        self._stagger_avg(self.ustag, uc)
+
+        # predictor: mid-time-step pointewise values at cell-center
+        # Eq. (1.1) in Jiand and Tadmor
+        self.fx(self.fxa, uc)
+        _slopes(self.ux, self.fxa, axis=1)
+        self._extra_corrector(uc, dt/2)
+        uc -= lmd_x / 2 * self.ux
+
+        # corrector
+        # Eq (1.2) in Jiang and Tadmor
+        # self.fill_boundaries(uc)
+        self.fxa[:] = 0
+        self.fx(self.fxa, uc)
+        self._corrector_step(self.ustag, self.fxa, lmd_x)
+
+        return self.ustag
+
+    def central_scheme(self, uc, dx, dt):
+        """ One timestep of centered scheme
+
+
+        Parameters
+        ----------
+        fx : callable
+            fx(u) calculates the numeric flux in the x-direction
+        uc: (neq, n)
+            The state vector on the centered grid
+        dx: float
+            size of grid cell
+        dt: float
+            Time step
+
+        Returns
+        -------
+        out: (neq, n)
+        state vector on centered grid
+        """
+
+        if not self.initialized:
+            self.init(uc)
+
+        stag = np.roll(self._single_step(uc, dx, dt), -1, axis=1)
+        self._stagger_avg(uc, stag)
+        return uc
+
+    cdef _stagger_avg(self, avg, uci):
+        _slopes(self.ux, uci, axis=1)
+
+        cdef double[:,:,:] ux = self.ux
+        cdef double[:,:,:] uc = uci
+        cdef double[:,:,:] out = avg
+
+        cdef int i, j, k
+        for i in prange(ux.shape[0], nogil=True):
+            for j in range(ux.shape[1]-1):
+                out[i, j+1] = (uc[i,j,0] + uc[i,j+1,0])/2 +\
+                              (ux[i,j,0] - ux[i,j+1,0])/8
+
+
+    def _corrector_step(self, double[:,:,:] out, double[:,:,:] fx,
+                        double lmd_x):
+
+        cdef int i, j
+        for i in prange(out.shape[0], nogil=True):
+            for j in range(out.shape[1]-1):
+                out[i,j+1,0] += (fx[i,j,0] - fx[i,j+1,0]) * lmd_x
