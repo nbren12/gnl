@@ -238,6 +238,7 @@ def plotiter(l,
              w=1,
              aspect=1.0,
              tight_layout=True,
+             label=True,
              label_dict={},
              sharex=False,
              sharey=False,
@@ -293,12 +294,13 @@ def plotiter(l,
 
         ax = plt.axes(plt.subplot(nrow, ncol, i + 1, **subplot_kwargs))
 
-        if label_kwargs['labeltype'] == 'alpha':
-            label = string.ascii_uppercase[i]
-            args = label_kwargs['loc'] + (label,)
+        if label:
+            if label_kwargs['labeltype'] == 'alpha':
+                label = string.ascii_uppercase[i]
+                args = label_kwargs['loc'] + (label,)
 
-            ax.text(*args, transform=ax.transAxes,
-                    fontdict=dict(weight='bold', size='x-large'))
+                ax.text(*args, transform=ax.transAxes,
+                        fontdict=dict(weight='bold', size='x-large'))
 
         if yield_axis:
             yield l[i], ax
