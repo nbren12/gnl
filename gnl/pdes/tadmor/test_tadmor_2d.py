@@ -18,7 +18,7 @@ def tadmor_error(n):
 
     class AdvecSolver(Tadmor2D):
 
-        n_ghost = n
+        n_ghost = 4
         neq = 1
         bcs = None
         sizes = (n, n)
