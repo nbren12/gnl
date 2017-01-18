@@ -7,7 +7,7 @@ from .barotropic import BarotropicSolver, ghosted_grid,\
 from ..fab import BCMultiFab
 from ..timestepping import steps
 
-plot = True
+plot = False
 PRINT_LATEX = True
 
 def taylor_vortex(x, y):
