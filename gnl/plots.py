@@ -238,8 +238,10 @@ def plotiter(l,
              w=1,
              aspect=1.0,
              tight_layout=True,
-             label=True,
+             label=None,
              label_dict={},
+             labeltype='iter',
+             title=False,
              sharex=False,
              sharey=False,
              **kwargs):
@@ -267,7 +269,7 @@ def plotiter(l,
     """
 
     # Label_dict defaults:
-    label_kwargs = dict(labeltype='alpha', loc=(-.05, 1.1))
+    label_kwargs = dict(labeltype=labeltype, loc=(-.05, 1.1), title=title)
     label_kwargs.update(label_dict)
 
     l = list(l)
@@ -294,11 +296,17 @@ def plotiter(l,
 
         ax = plt.axes(plt.subplot(nrow, ncol, i + 1, **subplot_kwargs))
 
-        if label:
+        if labeltype is not None:
             if label_kwargs['labeltype'] == 'alpha':
                 label = string.ascii_uppercase[i]
-                args = label_kwargs['loc'] + (label,)
+            elif label_kwargs['labeltype'] == 'iter':
+                label = l[i]
 
+
+            if label_kwargs.get('title', True):
+                ax.set_title(label)
+            else:
+                args = label_kwargs['loc'] + (label,)
                 ax.text(*args, transform=ax.transAxes,
                         fontdict=dict(weight='bold', size='x-large'))
 
