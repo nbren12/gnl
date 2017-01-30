@@ -67,7 +67,7 @@ def _slopes(uy, uc, axis=-1, tht=None, limiter=None):
 
     cdef double left, cent, right
     with nogil:
-        for j in prange(neq):
+        for j in range(neq):
             for i in range(n1):
                 for k in range(1, n2 - 1):
                     if limv[j]:
@@ -304,7 +304,7 @@ cdef class Tadmor1DBase:
         cdef double[:,:,:] out = avg
 
         cdef int i, j, k
-        for i in prange(ux.shape[0], nogil=True):
+        for i in range(ux.shape[0]):
             for j in range(ux.shape[1]-1):
                 out[i, j+1] = (uc[i,j,0] + uc[i,j+1,0])/2 +\
                               (ux[i,j,0] - ux[i,j+1,0])/8
@@ -314,6 +314,7 @@ cdef class Tadmor1DBase:
                         double lmd_x):
 
         cdef int i, j
-        for i in prange(out.shape[0], nogil=True):
-            for j in range(out.shape[1]-1):
-                out[i,j+1,0] += (fx[i,j,0] - fx[i,j+1,0]) * lmd_x
+        with nogil:
+            for i in range(out.shape[0]):
+                for j in range(out.shape[1]-1):
+                    out[i,j+1,0] += (fx[i,j,0] - fx[i,j+1,0]) * lmd_x
