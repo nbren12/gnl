@@ -105,6 +105,7 @@ def phaseshift_regular_grid(A, speed):
     C : The phase shifted data array
 
     """
+    from scipy.ndimage.interpolation import shift as ndshift
     C = A.copy()
 
     # Grid spacing
