@@ -81,6 +81,50 @@ def phaseshift(u500, c=0):
     return out
 
 
+def phaseshift_regular_grid(A, speed):
+    """
+    Phase shift data for wave-frame moving averages
+
+    Parameters
+    ----------
+    A: DataArray
+        The input data array can have any number of dimensions, but it must
+        satisfy some simple properties:
+
+        1. periodicity in the 'x' direction
+        2. 'time' is the first dimension of the dataset
+        3. 'time' coord has units 's'
+        4. 'x' coord has units 'm'
+        5. 'x', and 'time' are defined on a regular grid
+
+    speed: float
+        The speed of waves to follow.
+
+    Returns
+    -------
+    C : The phase shifted data array
+
+    """
+    C = A.copy()
+
+    # Grid spacing
+    dx = A.x[1] - A.x[0]
+    dt = (A.time[1] - A.time[0]) * 86400
+
+    # shift = (-c * t, 0) = (- c * dt * i / dx)
+    def indshift(i):
+        shift = [0]*(C.ndim-1)
+        shift[C.get_axis_num('x')-1] = float((-speed *dt * i/dx).values)
+        return shift
+
+
+
+    # shift data
+    for it, t in enumerate(A.time):
+        ndshift(A.values[it,...], indshift(it), output=C.values[it,...], mode='wrap')
+
+    return C
+
 def roll(z, **kwargs):
     """Rotate datarray periodically
 
