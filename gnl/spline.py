@@ -38,5 +38,9 @@ def psplines(x, a, b, n, k=3):
     proj = np.eye(per.shape[0]) - per @np.linalg.pinv(per)
 
     # remove rows which have satisfied constraints
-    proj = proj[:-k,:]
-    return proj @ A
+    B = proj[:-k,:] @ A
+
+    # normalize to unit height
+    B /= np.max(B, 1, keepdims=True)
+
+    return B
