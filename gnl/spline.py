@@ -36,4 +36,7 @@ def psplines(x, a, b, n, k=3):
     per = np.hstack(splines(a, a, b, n, k=k, deriv=p)
                     - splines(b, a, b, n, k=k, deriv=p) for p in range(k))
     proj = np.eye(per.shape[0]) - per @np.linalg.pinv(per)
-    return proj @A
+
+    # remove rows which have satisfied constraints
+    proj = proj[:-k,:]
+    return proj @ A
