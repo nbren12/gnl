@@ -10,6 +10,7 @@ Interfacing with scikits-learn
 import functools
 import inspect
 import xarray as xr
+import dask.array as da
 import numpy as np
 import scipy.ndimage
 from . import util
@@ -232,12 +233,24 @@ def test_XRReshaper():
     return 0
 
 
-def meanevery(A, axis, q=8):
-    i = np.arange(0, A.shape[1], q)
-    A = util.meanat(A, i, A.get_axis_num(axis))
-    A[axis] = util.meanat(A[axis], i, 0)
+def meanevery(x, axis, q):
 
-    return A
+    dim = x.get_axis_num(axis)
+
+    vals = da.coarsen(np.mean, x.data, {dim:q})
+
+    # coarsen dimension
+    c  = x[axis].data
+    dim = da.from_array(c, chunks=(len(c), ))
+    dim = da.coarsen(np.mean, dim, {0:q}).compute()
+
+
+    # new coordinate array
+    coords = {k:c for k,c in x.coords.items()}
+    coords[axis] = dim
+
+    return xr.DataArray(vals, dims=x.dims, coords=coords, attrs=x.attrs,
+                        name=x.name)
 
 
 # Add custom functions to DataArray class dynamically
