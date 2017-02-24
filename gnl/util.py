@@ -186,4 +186,39 @@ def linearf2matrix(fun, n):
     cols = [fun(X[i])[:, None] for i in range(n)]
     return np.concatenate(cols, axis=1)
 
+## data analysis
 
+def meanat(y, inds, axis):
+    n  = y.shape[axis]
+    di = np.diff(np.r_[inds, n])
+    ym = np.add.reduceat(y, inds, axis=axis)
+
+    ym /= baxis(di, ym.ndim-axis)
+
+    return ym
+
+
+
+## numpy tricks
+def baxis(x, size):
+    """Broadcast x to given shape
+
+    Parameters
+    ----------
+    x: array_like
+        input 1 dimensional array
+    size: int
+        number of np.newaxis to pad to shape of x
+
+    Returns
+    -------
+    y: array_like
+        broadcastable version of x
+
+    """
+    x= np.asarray(x)
+
+    ind = [np.newaxis]*size
+    ind[0] = slice(None)
+
+    return x[ind]

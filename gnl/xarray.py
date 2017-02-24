@@ -232,7 +232,16 @@ def test_XRReshaper():
     return 0
 
 
+def meanevery(A, axis, q=8):
+    i = np.arange(0, A.shape[1], q)
+    A = util.meanat(A, i, A.get_axis_num(axis))
+    A[axis] = util.meanat(A[axis], i, 0)
+
+    return A
+
+
 # Add custom functions to DataArray class dynamically
+xr.DataArray.meanevery = meanevery
 xr.DataArray.integrate = integrate
 xr.DataArray.roll = roll
 xr.DataArray.remove_repeats = remove_repeats
