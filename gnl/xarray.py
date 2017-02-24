@@ -6,6 +6,7 @@ Patch with scipy.ndimage
 Interfacing with scikits-learn
 ==============================
 
+
 """
 import functools
 import inspect
@@ -233,12 +234,12 @@ def test_XRReshaper():
     return 0
 
 
-def coarsen(x, axis, q, fun=np.mean):
+def coarsen(A, fun=np.mean, **kwargs):
     """Coarsen DataArray using reduction
 
     Parameters
     ----------
-    x: DataArray
+    A: DataArray
     axis: str
         name of axis
     q: int
@@ -249,24 +250,41 @@ def coarsen(x, axis, q, fun=np.mean):
     Returns
     -------
     y: DataArray
+
+
+    Examples
+    --------
+
+    Load data and coarsen along the x dimension
+    >>> name = "/scratch/noah/Data/SAM6.10.9/OUT_2D/HOMO_2km_16384x1_64_2000m_5s.HOMO_2K.smagor_16.2Dcom_*.nc"
+
+    >>> ds = xr.open_mfdataset(name, chunks={'time': 100})
+    >>> # tb = ds.apply(lambda x: x.meanevery('x', 32))
+    >>> def f(x):
+    ...     return x.coarsen(x=16)
+    >>> dsc = ds.apply(f)
+    >>> print("saving to netcdf")
+    >>> dsc.to_netcdf("2dcoarsened.nc")
     """
 
-    dim = x.get_axis_num(axis)
-
-    vals = da.coarsen(fun, x.data, {dim:q})
+    coarse_dict = {A.get_axis_num(k): v for k,v in kwargs.items()}
+    vals = da.coarsen(fun, A.data, coarse_dict)
 
     # coarsen dimension
-    c  = x[axis].data
-    dim = da.from_array(c, chunks=(len(c), ))
-    dim = da.coarsen(np.mean, dim, {0:q}).compute()
+    coords = {}
+    for k in A.coords:
+        if k in kwargs:
+            c  = A[k].data
+            dim = da.from_array(c, chunks=(len(c), ))
 
+            q = kwargs[k]
+            dim = da.coarsen(np.mean, dim, {0: q}).compute()
+            coords[k] = dim
+        else:
+            coords[k] = A.coords[k]
 
-    # new coordinate array
-    coords = {k:c for k,c in x.coords.items()}
-    coords[axis] = dim
-
-    return xr.DataArray(vals, dims=x.dims, coords=coords, attrs=x.attrs,
-                        name=x.name)
+    return xr.DataArray(vals, dims=A.dims, coords=coords, attrs=A.attrs,
+                        name=A.name)
 
 
 # Add custom functions to DataArray class dynamically
