@@ -233,11 +233,27 @@ def test_XRReshaper():
     return 0
 
 
-def meanevery(x, axis, q):
+def coarsen(x, axis, q, fun=np.mean):
+    """Coarsen DataArray using reduction
+
+    Parameters
+    ----------
+    x: DataArray
+    axis: str
+        name of axis
+    q: int
+        coarsening factor
+    fun:
+        reduction operator
+
+    Returns
+    -------
+    y: DataArray
+    """
 
     dim = x.get_axis_num(axis)
 
-    vals = da.coarsen(np.mean, x.data, {dim:q})
+    vals = da.coarsen(fun, x.data, {dim:q})
 
     # coarsen dimension
     c  = x[axis].data
@@ -254,7 +270,7 @@ def meanevery(x, axis, q):
 
 
 # Add custom functions to DataArray class dynamically
-xr.DataArray.meanevery = meanevery
+xr.DataArray.coarsen = coarsen
 xr.DataArray.integrate = integrate
 xr.DataArray.roll = roll
 xr.DataArray.remove_repeats = remove_repeats
