@@ -255,27 +255,6 @@ class XRReshaper(object):
         return xr.DataArray(arr, dims=dims, coords=coords)
 
 
-def test_XRReshaper():
-
-    sh = (100, 200, 300)
-    dims = ['x', 'y', 'z']
-
-    coords = {}
-    for d, n in zip(dims, sh):
-        coords[d] = np.arange(n)
-
-    da = xr.DataArray(np.random.rand(*sh), dims=dims, coords=coords)
-
-    rs = XRReshaper(da)
-
-    arr = rs.to_flat('z')
-
-    rss = rs.from_flat(arr, 'z', 'z')
-    np.testing.assert_allclose(rss - da, 0)
-
-    return 0
-
-
 def coarsen(A, fun=np.mean, **kwargs):
     """Coarsen DataArray using reduction
 
@@ -308,6 +287,10 @@ def coarsen(A, fun=np.mean, **kwargs):
     >>> print("saving to netcdf")
     >>> dsc.to_netcdf("2dcoarsened.nc")
     """
+
+    # this function needs a dask array to work
+    if A.chunks is None:
+        A = A.chunk({k:len(v) for k,v in A.coords.items()})
 
     coarse_dict = {A.get_axis_num(k): v for k,v in kwargs.items()}
     vals = da.coarsen(fun, A.data, coarse_dict)
