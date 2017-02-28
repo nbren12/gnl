@@ -199,6 +199,7 @@ def remove_repeats(data, dim='time'):
 #     setattr(xr.DataArray, 'ndimage_' + func_name, ndimage_wrapper(func))
 
 
+@xr.register_dataarray_accessor('reshape')
 class XRReshaper(object):
     """An object for reshaping DataArrays into 2D matrices
 
@@ -207,7 +208,7 @@ class XRReshaper(object):
 
     Methods
     -------
-    to_flat(dim):
+    to(dim):
         return 2D numpy array where the second dimension is specified by dim
     from_flat(arr, old_dim, new_dim):
         returns a DataArray where old_dim is replaced by the new_dim
@@ -217,38 +218,47 @@ class XRReshaper(object):
     def __init__(self, da):
         self._da = da
 
-    def to_flat(self, dim):
+    def to(self, feature_dims):
+        """feature_dims is a seq of dimensions to use as a feature"""
 
         da = self._da
-        npa = np.rollaxis(da.values, da.get_axis_num(dim), da.ndim)
+
+        axes_list = [dim for dim in da.dims if dim not in feature_dims] \
+                    + feature_dims
+
+        axes_list = [da.get_axis_num(dim) for dim in axes_list]
+
+        npa = np.transpose(da.values, axes=axes_list)
 
         sh = npa.shape
-        npa = npa.reshape((-1, sh[-1]))
+
+        nfeats =  sum(sh[:len(feature_dims)])
+        npa = npa.reshape((-1, nfeats))
 
         return npa
 
-    def from_flat(self, arr, old_dim='z', new_dim='m'):
+    # def from(self, arr, old_dim='z', new_dim='m'):
 
-        # create new shape
-        sh = list(self._da.shape)
-        sh.pop(self._da.get_axis_num(old_dim))
-        sh.append(arr.shape[-1])
+    #     # create new shape
+    #     sh = list(self._da.shape)
+    #     sh.pop(self._da.get_axis_num(old_dim))
+    #     sh.append(arr.shape[-1])
 
-        # reshape
-        arr = arr.reshape(sh)
+    #     # reshape
+    #     arr = arr.reshape(sh)
 
-        dims = list(self._da.dims)
-        dims.remove(old_dim)
-        dims.append(new_dim)
+    #     dims = list(self._da.dims)
+    #     dims.remove(old_dim)
+    #     dims.append(new_dim)
 
-        coords = {k: self._da[k] for k in dims if k in self._da}
+    #     coords = {k: self._da[k] for k in dims if k in self._da}
 
-        # make dim names
+    #     # make dim names
 
-        if old_dim != new_dim:
-            coords[new_dim] = np.arange(arr.shape[-1])
+    #     if old_dim != new_dim:
+    #         coords[new_dim] = np.arange(arr.shape[-1])
 
-        return xr.DataArray(arr, dims=dims, coords=coords)
+    #     return xr.DataArray(arr, dims=dims, coords=coords)
 
 
 def test_XRReshaper():
