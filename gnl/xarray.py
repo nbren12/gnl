@@ -17,23 +17,38 @@ import scipy.ndimage
 from . import util
 
 
-def ndimage_wrapper(func):
-    """Wrap a subset of scipy.ndimage functions for easy use with xarray"""
+## ndimage wrapper
+class MetaNdImage(type):
+    def __new__(cls, name, parents, dct):
+        for func_name, func in inspect.getmembers(scipy.ndimage, inspect.isfunction):
+            dct[func_name] = MetaNdImage.wrapper(func)
+            # setattr(xr.DataArray, 'ndimage_' + func_name, ndimage_wrapper(func))
+        return  super(MetaNdImage, cls).__new__(cls, name, parents, dct)
 
-    @functools.wraps(func)
-    def f(x, axes_kwargs, *args, dims=[], **kwargs):
 
-        # named axes args to list
-        axes_args = [axes_kwargs[k] for k in x.dims]
-        y = x.copy()
+    def wrapper(func):
+        """Wrap a subset of scipy.ndimage functions for easy use with xarray"""
 
-        axes_args.extend(args)
-        y.values = func(x, axes_args, **kwargs)
-        y.attrs['edits'] = repr(func.__code__)
+        @functools.wraps(func)
+        def f(self, axes_kwargs, *args, dims=[], **kwargs):
 
-        return y
+            x = self._obj
+            # named axes args to list
+            axes_args = [axes_kwargs[k] for k in x.dims]
+            y = x.copy()
 
-    return f
+            axes_args.extend(args)
+            y.values = func(x, axes_args, **kwargs)
+            y.attrs['edits'] = repr(func.__code__)
+
+            return y
+
+        return f
+
+@xr.register_dataarray_accessor('ndimage')
+class NdImageAccesor(metaclass=MetaNdImage):
+    def __init__(self, obj):
+        self._obj = obj
 
 
 def xargs(z):
@@ -157,8 +172,8 @@ def remove_repeats(data, dim='time'):
     return data[{dim: inds}]
 
 
-for func_name, func in inspect.getmembers(scipy.ndimage, inspect.isfunction):
-    setattr(xr.DataArray, 'ndimage_' + func_name, ndimage_wrapper(func))
+# for func_name, func in inspect.getmembers(scipy.ndimage, inspect.isfunction):
+#     setattr(xr.DataArray, 'ndimage_' + func_name, ndimage_wrapper(func))
 
 
 class XRReshaper(object):
