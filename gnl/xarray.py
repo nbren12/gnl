@@ -20,13 +20,18 @@ from . import util
 ## ndimage wrapper
 class MetaNdImage(type):
     def __new__(cls, name, parents, dct):
+
+        # for each function in scipy.ndimage wrap and add to class
         for func_name, func in inspect.getmembers(scipy.ndimage, inspect.isfunction):
-            dct[func_name] = MetaNdImage.wrapper(func)
+            if func_name[-2:] == '1d':
+                dct[func_name] = MetaNdImage.wrapper1d(func)
+            else:
+                dct[func_name] = MetaNdImage.wrappernd(func)
             # setattr(xr.DataArray, 'ndimage_' + func_name, ndimage_wrapper(func))
         return  super(MetaNdImage, cls).__new__(cls, name, parents, dct)
 
 
-    def wrapper(func):
+    def wrappernd(func):
         """Wrap a subset of scipy.ndimage functions for easy use with xarray"""
 
         @functools.wraps(func)
@@ -39,6 +44,24 @@ class MetaNdImage(type):
 
             axes_args.extend(args)
             y.values = func(x, axes_args, **kwargs)
+            y.attrs['edits'] = repr(func.__code__)
+
+            return y
+
+        return f
+
+
+    def wrapper1d(func):
+        """Wrapper for 1D functions
+        """
+
+        @functools.wraps(func)
+        def f(self, dim, *args, **kwargs):
+
+            x = self._obj
+            # named axes args to list
+            y = x.copy()
+            y.values = func(x, *args, axis=x.get_axis_num(dim), **kwargs)
             y.attrs['edits'] = repr(func.__code__)
 
             return y
