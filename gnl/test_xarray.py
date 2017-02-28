@@ -1,7 +1,7 @@
 import numpy as np
 import xarray as xr
 from . import xarray
-from .datasets import tiltwave
+from .datasets import tiltwave, rand3d
 
 
 def test_ndimage():
@@ -18,26 +18,23 @@ def test_ndimage():
 def test_reshape():
     a = tiltwave()
 
-    mat = a.reshape.to(['x'])
-    mat.shape == (len(a.x), len(a.z))
+    mat, dl = a.reshape.to(['x'])
+    assert mat.shape == (len(a.z), len(a.x))
 
-    mat = a.reshape.to(['z'])
-    mat.shape == (len(a.z), len(a.x))
+    mat, dl = a.reshape.to(['z'])
+    assert mat.shape == (len(a.x), len(a.z))
 
-def test_XRReshaper():
+    a.reshape.get(mat, dl, a.coords)
 
-    sh = (100, 200, 300)
-    dims = ['x', 'y', 'z']
+    da = rand3d()
+    arr, dl = da.reshape.to(['z', 'y'])
 
-    coords = {}
-    for d, n in zip(dims, sh):
-        coords[d] = np.arange(n)
 
-    da = xr.DataArray(np.random.rand(*sh), dims=dims, coords=coords)
 
-    arr = da.reshape.to(['z'])
-
-    rss = rs.from_flat(arr, 'z', 'z')
+    assert arr.shape == (len(da.x), len(da.y)*len(da.z))
+    rss = da.reshape.get(arr, dl, da.coords)
     np.testing.assert_allclose(rss - da, 0)
+
+
 
     return 0
