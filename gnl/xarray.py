@@ -1,11 +1,5 @@
 """A module containing useful patches to xarray
 
-Patch with scipy.ndimage
-========================
-
-Interfacing with scikits-learn
-==============================
-
 
 """
 import functools
@@ -75,9 +69,9 @@ class NdImageAccesor(metaclass=MetaNdImage):
 
 
 def xargs(z):
-    """
-    Returns:
-    x, y, z
+    """Return x,y,z
+
+    This function is useful for plotting
     """
 
     dims = z.dims
@@ -169,8 +163,8 @@ def phaseshift_regular_grid(A, speed):
 def roll(z, **kwargs):
     """Rotate datarray periodically
 
-    Example
-    ------
+    Examples
+    --------
     """
     roll(U, x=400)
     from scipy import ndimage
@@ -212,7 +206,7 @@ class XRReshaper(object):
         self._da = da
 
     def to(self, feature_dims):
-        """reshape data array into 2D array
+        """Reshape data array into 2D array
 
         Parameters
         ----------
