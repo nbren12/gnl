@@ -94,7 +94,8 @@ def psplines(x, t, k=3, periodic=True, **kwargs):
     B = proj[:-k,:] @ A
 
     # normalize to unit height
-    B /= np.max(B, 1, keepdims=True)
+    # this can break if the number of x points is less than the number of knots
+    # B /= np.max(B, 0, keepdims=True)
 
     return B
 
