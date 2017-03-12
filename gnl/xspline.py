@@ -26,12 +26,12 @@ class Spline(object):
         self._coef = None
 
 
-    def _spline_mat(self, x):
+    def _spline_mat(self, x, d=0):
         args = (x, self.knots, self.order)
         if self.bc == 'periodic':
-            spline_mat = spline.psplines(*args)
+            spline_mat = spline.psplines(*args, deriv=d)
         else:
-            spline_mat = spline.splines(*args)
+            spline_mat = spline.splines(*args, deriv=d)
 
         return spline_mat
 
@@ -75,7 +75,7 @@ class Spline(object):
         """
         dim  = self.dim
 
-        spline_mat = self._spline_mat(x)
+        spline_mat = self._spline_mat(x, d=d)
         coords = {dim: x, self.spdimname: np.arange(spline_mat.shape[0])}
 
         B = xr.DataArray(spline_mat,

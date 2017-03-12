@@ -1,4 +1,5 @@
 import numpy as np
+import xarray as xr
 from .xspline import Spline
 from .datasets import tiltwave
 import os
@@ -47,3 +48,16 @@ def test_xspline():
 
 
     return 0
+
+
+def test_spline_der():
+
+    x = np.linspace(0, 2 * np.pi, 101)
+
+    y = np.sin(x)
+
+    yd = xr.DataArray(y, (('x', x), ))
+
+    spl = Spline(yd.x, 'x').fit(yd)
+    deriv = spl.predict(yd.x, d=1)
+    np.testing.assert_allclose(deriv, np.cos(x), atol=1e-5)
