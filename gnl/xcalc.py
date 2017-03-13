@@ -21,6 +21,11 @@ def dask_centdiff(x, axis=-1, boundary='periodic'):
                 y[0] = 2 * y[1] - y[2]
             if block_id[axis] == nblock - 1:
                 y[-1] = 2 * y[-2] - y[-3]
+        elif boundary == 'periodic':
+            pass
+        else:
+            raise NotImplementedError("Boundary type `{}` not implemented".format(boundary))
+
 
         dy =  np.roll(y, -1, 0) - np.roll(x,1, 0)
 
