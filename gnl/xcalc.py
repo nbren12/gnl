@@ -27,7 +27,7 @@ def dask_centdiff(x, axis=-1, boundary='periodic'):
             raise NotImplementedError("Boundary type `{}` not implemented".format(boundary))
 
 
-        dy =  np.roll(y, -1, 0) - np.roll(x,1, 0)
+        dy =  np.roll(y, -1, 0) - np.roll(y,1, 0)
 
         return dy.swapaxes(axis, 0)
 
