@@ -38,3 +38,17 @@ def test_reshape():
 
 
     return 0
+
+
+def test_wrapcli():
+
+    @xarray.wrapcli
+    def theta(A, B):
+        return A*B
+
+
+    tiltwave().to_dataset(name="A").to_netcdf("test.nc")
+    tiltwave().to_dataset(name="B").to_netcdf("testB.nc")
+
+    AB = theta("A", "B", data=["test.nc", "testB.nc"])
+

@@ -311,3 +311,19 @@ xr.DataArray.coarsen = coarsen
 xr.DataArray.integrate = integrate
 xr.DataArray.roll = roll
 xr.DataArray.remove_repeats = remove_repeats
+
+
+def wrapcli(fun):
+    """Wrap a function which takes dataarrays as inputs
+    """
+    @functools.wraps(fun)
+    def f(*args, data=[], **kwargs):
+        ds = xr.merge(xr.open_dataset(f) for f in data)
+        fun_args = (ds[arg] for arg in args)
+
+        return fun(*fun_args, **kwargs)
+
+    return f
+
+
+
