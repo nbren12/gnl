@@ -43,7 +43,7 @@ class Spline(object):
         A : DataArray
         """
 
-        spline_mat = self._spline_mat(A.x.values)
+        spline_mat = self._spline_mat(A[dim].values)
 
         # since we are applying the opertor numerous times
         # explicitly compute the pseudoinverse
