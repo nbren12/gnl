@@ -238,7 +238,13 @@ class XRReshaper(object):
 
         return npa, dim_list
 
-    def get(self, arr, dims, coords):
+    def get(self, arr, dims):
+        coords = {}
+        for i, dim in enumerate(dims):
+            if dim in self._da.coords:
+                coords[dim] = self._da[dim].values
+            else:
+                coords[dim] = np.arange(arr.shape[i])
 
         # create new shape
         sh = [len(coords[dim]) for dim in dims]
