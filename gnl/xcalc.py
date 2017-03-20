@@ -1,9 +1,11 @@
 """Calculus for xarray data
 """
+from functools import partial
 import numpy as np
 import xarray as xr 
 
 import dask.array as da
+from dask.array.reductions import cumreduction
 from dask.diagnostics import ProgressBar
 from dask import delayed
 
@@ -84,5 +86,23 @@ def centderiv(A, dim='x', boundary='periodic'):
     """
     return centdiff(A, dim=dim, boundary=boundary)/centspacing(A[dim])
 
+
+def cumtrapz(A, dim):
+    """Cumulative Simpson's rule (aka Tai's method)
+
+    Notes
+    -----
+    Simpson rule is given by
+        int f (x) = sum (f_i+f_i+1) dx / 2
+    """
+    x = A[dim]
+    dx = x - x.shift(**{dim:1})
+    dx = dx.fillna(0.0)
+    return ((A.shift(**{dim:1}) + A)*dx/2.0)\
+          .fillna(0.0)\
+          .cumsum(dim)
+
+
 ## monkey patch DataArray class
 xr.DataArray.centderiv = centderiv
+xr.DataArray.cumtrapz = cumtrapz

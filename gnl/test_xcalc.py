@@ -1,5 +1,5 @@
 import numpy as np
-from .xcalc import centderiv, centspacing
+from .xcalc import centderiv, centspacing, cumtrapz
 from .datasets import tiltwave
 
 
@@ -30,3 +30,18 @@ def test_centspacing():
     dx = centspacing(xd).values
 
     np.testing.assert_allclose(dx, np.ones_like(dx) * 2)
+
+
+def test_cumtrapz():
+    A = tiltwave().chunk({'z':5})
+
+    from scipy.integrate import cumtrapz
+
+
+
+
+    res_scipy = cumtrapz(A.values, A.z.values,
+                         axis=A.get_axis_num('z'), initial=0)
+
+    res_xr = A.cumtrapz('z').values
+    np.testing.assert_array_almost_equal(res_scipy, res_xr)
