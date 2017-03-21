@@ -221,15 +221,15 @@ class XRReshaper(object):
             list of dim names in the same order as the output array. useful for the from function below.
 
         """
+        A = self._da
 
-        da = self._da
 
-        dim_list = [dim for dim in da.dims if dim not in feature_dims] \
+        dim_list = [dim for dim in A.dims if dim not in feature_dims] \
                     + feature_dims
 
-        axes_list = [da.get_axis_num(dim) for dim in dim_list]
+        axes_list = [A.get_axis_num(dim) for dim in dim_list]
 
-        npa = np.transpose(da.values, axes=axes_list)
+        npa = A.data.transpose(axes_list)
 
         sh = npa.shape
 
