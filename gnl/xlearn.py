@@ -1,80 +1,97 @@
-import numpy as np
+"""Sklearn wrappers
+"""
 import dask.array as da
+import numpy as np
+from dask.array.linalg import svd_compressed
+
 from .xarray import XRReshaper
 
 
-class XTransformer(object):
-    """Wraps sklearn transformation objects
-
-    So far this probably only works for SVD objects, but not PCA objects because those carry along the mean of the features.
-
+class TruncatedSVD(object):
+    """Dask friendly TruncatedSVD class
     """
-    def __init__(self, model, feature_dims, w=1.0):
-        """
-        Parameters
-        ----------
-        model:
-            Instantiated sklearn transformer object
-        feature_dims: seq of string
-            list of xarray dimensions to be used as feature.
-        w: DataArray or float
-            weights
-        """
-        self._model = model
-        self.feats = feature_dims
-
-        self.w = w
+    def __init__(self, n_components=10, **kwargs):
+        self.n_components  = n_components
+        self.svd_kwargs = kwargs
 
     def fit(self, A):
-        # make sure the data is loaded
-        A.load()
-        rs = XRReshaper(A * np.sqrt(self.w))
-        vals, dims = rs.to(self.feats)
-        self._model.fit(vals)
+        _, _, vt = svd_compressed(A, self.n_components, **self.svd_kwargs)
+
+        self.components_ = vt
+
+    def transform(self, A):
+        return A.dot(self.components_.T)
+
+    def inverse_transform(self, A):
+        return A.dot(self.components_)
+
+class PCA(TruncatedSVD):
+    def fit(self, A):
+        self.empirical_mean_ = A.mean(axis=0)
+        B = A - self.empirical_mean_
+        return super(PCA, self).fit(B)
+
+    def transform(self, A):
+        return super(PCA, self).transform(A-self.empirical_mean_)
+
+    def inverse_transform(self, A):
+        return super(PCA, self).inverse_transform(A)+self.empirical_mean_
+
+
+class XTransformerMixin(object):
+    """Mixin which enables an sklearn like interface for objects with the
+    transformer interface
+    """
+
+
+    # add init method
+    def __init__(self, *args, feature_dims=[], weights=1.0, **kwargs):
+        self.feature_dims = feature_dims
+        self._model = self._parent(*args, **kwargs)
+        self.weights = weights
+
+    def __getattr__(self, key):
+        if key not in self.__dict__:
+            return getattr(self._model, key)
+
+    def fit(self, A):
+        feats = self.feature_dims
+        rs = XRReshaper(A* np.sqrt(self.weights))
+        vals, dims = rs.to(feats)
+
         self._rs = rs
-        return self
+        return self._model.fit(vals )
+
+
+    def transform(self, A):
+        # sample dims
+
+        sample_dims = [dim for dim in A.dims
+                       if dim not in self.feature_dims]
+
+        feats = self.feature_dims
+        rs = XRReshaper(A*self.weights)
+        vals, dims = rs.to(feats)
+
+        dout = self._model.transform(vals)
+        return rs.get(dout, sample_dims + ['mode'])
+
+    def inverse_transform(self, A):
+
+        nmodes = A.shape[-1]
+        vals = A.data.reshape((-1, nmodes))
+
+        dout = self._model.inverse_transform(vals)
+        return self._rs.get(dout, self._rs.dims)/np.sqrt(self.weights)
 
     @property
     def components_(self):
         rs = self._rs
-        return rs.get(self._model.components_, ['mode'] + self.feats) / np.sqrt(self.w)
+        return rs.get(self._model.components_, ['mode'] + self.feature_dims)\
+            / np.sqrt(self.weights)
 
-    def transform(self, A):
+class XSVD(XTransformerMixin):
+    _parent = TruncatedSVD
 
-        # sample dims
-        sample_dims = [dim for dim in A.dims
-                       if dim not in self.feats]
-
-        # make sure that chunks of A is contigous along the feature dimensions
-        if A.chunks is not None:
-            assert all(len(A.chunks[A.get_axis_num(dim)]) == 1
-                       for dim in self.feats)
-
-        rs = XRReshaper(A * np.sqrt(self.w))
-        vals, dims = rs.to(self.feats)
-
-        # new chunk sizes for transform
-        chunks = (vals.chunks[0], (self._model.n_components,))
-
-        # use map blocks to perform the transform
-        def f(val):
-            return self._model.transform(val)
-
-        pcs =  da.map_blocks(f, vals, dtype=vals.dtype, chunks=chunks)
-
-        return rs.get(pcs, sample_dims + ['mode'])
-
-
-class XSVD(XTransformer):
-
-    def __init__(self, feature_dims, w=1.0, *args, **kwargs):
-        "docstring"
-        from sklearn.decomposition import TruncatedSVD
-
-        model = TruncatedSVD(*args, **kwargs)
-        return super(XSVD, self).__init__(model, feature_dims, w=w)
-
-    def inverse_transform(self, A):
-        """This only works for SVD"""
-
-        return A.dot(self.components_ )
+class XPCA(XSVD):
+    _parent = PCA

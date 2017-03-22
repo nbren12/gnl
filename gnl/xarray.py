@@ -205,6 +205,10 @@ class XRReshaper(object):
     def __init__(self, da):
         self._da = da
 
+    @property
+    def dims(self):
+        return self._da.dims
+
     def to(self, feature_dims):
         """Reshape data array into 2D array
 
@@ -253,7 +257,6 @@ class XRReshaper(object):
         arr = arr.reshape(sh)
 
         return xr.DataArray(arr, dims=dims, coords=coords)
-
 
 def coarsen(A, fun=np.mean, **kwargs):
     """Coarsen DataArray using reduction
