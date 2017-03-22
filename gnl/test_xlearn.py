@@ -21,7 +21,14 @@ def test_xsvd():
     svd.components_
 
 
+    # PCA
     pca = XPCA(feature_dims=['lat', 'lon'], weights=weights, n_components=4)
     pca.fit(air)
     pca.inverse_transform(pca.transform(air))
     pca.components_
+
+    # SVD with two sample_dims
+    svd = XSVD(feature_dims=['lat'], weights=weights, n_components=4)
+    svd.fit(air)
+    pcs = svd.transform(air)
+    recon = svd.inverse_transform(pcs)
