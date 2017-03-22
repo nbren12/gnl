@@ -48,6 +48,11 @@ class XTransformerMixin(object):
     def __init__(self, *args, feature_dims=[], weights=1.0, **kwargs):
         self.feature_dims = feature_dims
         self._model = self._parent(*args, **kwargs)
+
+        if hasattr(weights, 'dims'):
+            if any(dim not in feature_dims for dim  in weights.dims):
+                raise ValueError("Weights must only be defined along feature dimensions.")
+
         self.weights = weights
 
     def __getattr__(self, key):
