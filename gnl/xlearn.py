@@ -1,10 +1,21 @@
 """Sklearn wrappers
 """
+import xarray as xr
 import dask.array as da
 import numpy as np
 from dask.array.linalg import svd_compressed
 
-from .xarray import XRReshaper
+
+def unstack_array(x, dims, coords):
+    new_coords = {}
+
+    for i, dim in enumerate(dims):
+        if dim in coords:
+            new_coords[dim] = coords[dim]
+        else:
+            new_coords[dim] = np.arange(x.shape[i])
+
+    return xr.DataArray(x, dims=dims, coords=new_coords)
 
 
 class TruncatedSVD(object):
@@ -59,41 +70,53 @@ class XTransformerMixin(object):
         if key not in self.__dict__:
             return getattr(self._model, key)
 
-    def fit(self, A):
-        feats = self.feature_dims
-        rs = XRReshaper(A* np.sqrt(self.weights))
-        vals, dims = rs.to(feats)
+    def _sample_dims(self, A):
+        return [dim for dim in A.dims
+                if dim not in self.feature_dims]
 
-        self._rs = rs
-        return self._model.fit(vals )
+    def _data_matrix(self, A):
+        return A.stack(feature=self.feature_dims, sample=self._sample_dims(A))\
+            .transpose('sample', 'feature')
+
+    @property
+    def _coords(self):
+        return {'feature': self._feature_coord}
+
+    def _unstack_feats(self, A):
+        if len(self.feature_dims) > 1:
+            return A.unstack('feature')
+        else:
+            return A.rename({'feature': self.feature_dims[0]})
+
+    def fit(self, A):
+        vals = self._data_matrix(A * np.sqrt(self.weights))
+        self._feature_coord = vals.feature
+        return self._model.fit(vals.data)
 
 
     def transform(self, A):
         # sample dims
-
-        sample_dims = [dim for dim in A.dims
-                       if dim not in self.feature_dims]
-
-        feats = self.feature_dims
-        rs = XRReshaper(A*self.weights)
-        vals, dims = rs.to(feats)
-
-        dout = self._model.transform(vals)
-        return rs.get(dout, sample_dims + ['mode'])
+        vals = self._data_matrix(A * np.sqrt(self.weights))
+        dout = self._model.transform(vals.data)
+        return unstack_array(dout, ['sample', 'mode'], vals.coords)
 
     def inverse_transform(self, A):
+        dout = self._model.inverse_transform(A.data)
 
-        nmodes = A.shape[-1]
-        vals = A.data.reshape((-1, nmodes))
-
-        dout = self._model.inverse_transform(vals)
-        return self._rs.get(dout, self._rs.dims)/np.sqrt(self.weights)
+        coord = {'sample': A.sample, 'feature': self._feature_coord}
+        return  unstack_array(dout, ['sample', 'feature'], coord)\
+            .pipe(self._unstack_feats)
 
     @property
     def components_(self):
-        rs = self._rs
-        return rs.get(self._model.components_, ['mode'] + self.feature_dims)\
-            / np.sqrt(self.weights)
+        coords = {'feature': self._feature_coord}
+        out =  unstack_array(self._model.components_, ['mode', 'feature'], coords)\
+               .pipe(self._unstack_feats) /np.sqrt(self.weights)
+
+        return out
+
+
+
 
 class XSVD(XTransformerMixin):
     _parent = TruncatedSVD

@@ -20,6 +20,8 @@ def test_xsvd():
     recon = svd.inverse_transform(pcs)
     svd.components_
 
+    # svd.components_.to_netcdf("~/tmp.nc")
+
 
     # PCA
     pca = XPCA(feature_dims=['lat', 'lon'], weights=weights, n_components=4)
@@ -28,7 +30,8 @@ def test_xsvd():
     pca.components_
 
     # SVD with two sample_dims
-    svd = XSVD(feature_dims=['lat'], weights=weights, n_components=4)
+    svd = XPCA(feature_dims=['lat'], weights=weights, n_components=4)
     svd.fit(air)
     pcs = svd.transform(air)
     recon = svd.inverse_transform(pcs)
+    svd.components_.to_netcdf("~/out.nc")
