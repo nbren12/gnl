@@ -34,4 +34,3 @@ def test_xsvd():
     svd.fit(air)
     pcs = svd.transform(air)
     recon = svd.inverse_transform(pcs)
-    svd.components_.to_netcdf("~/out.nc")

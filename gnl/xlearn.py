@@ -6,6 +6,35 @@ import numpy as np
 from dask.array.linalg import svd_compressed
 
 
+class XDataMatrix(object):
+    """Class for making data matrices
+    """
+    def __init__(self, feature_dims=None):
+        "docstring"
+        self.feature_dims = feature_dims
+
+    def _sample_dims(self, A):
+        return [dim for dim in A.dims
+                if dim not in self.feature_dims]
+
+    def __call__(self, A):
+        out =  A.stack(feature=self.feature_dims, sample=self._sample_dims(A))\
+            .transpose('sample', 'feature')
+
+        self.feature_coord = out.feature
+
+        return out
+
+    @property
+    def _coords(self):
+        return {'feature': self.feature_coord}
+
+    def unstack_feats(self, A):
+        if len(self.feature_dims) > 1:
+            return A.unstack('feature')
+        else:
+            return A.rename({'feature': self.feature_dims[0]})
+
 def unstack_array(x, dims, coords):
     new_coords = {}
 
@@ -52,12 +81,17 @@ class PCA(TruncatedSVD):
 class XTransformerMixin(object):
     """Mixin which enables an sklearn like interface for objects with the
     transformer interface
+
+    TODO remove all stacking/unstacking code to XDataMatrix class
     """
 
 
     # add init method
     def __init__(self, *args, feature_dims=[], weights=1.0, **kwargs):
-        self.feature_dims = feature_dims
+
+        # class used for massaging data
+        self._rs = XDataMatrix(feature_dims)
+
         self._model = self._parent(*args, **kwargs)
 
         if hasattr(weights, 'dims'):
@@ -70,48 +104,30 @@ class XTransformerMixin(object):
         if key not in self.__dict__:
             return getattr(self._model, key)
 
-    def _sample_dims(self, A):
-        return [dim for dim in A.dims
-                if dim not in self.feature_dims]
-
-    def _data_matrix(self, A):
-        return A.stack(feature=self.feature_dims, sample=self._sample_dims(A))\
-            .transpose('sample', 'feature')
-
-    @property
-    def _coords(self):
-        return {'feature': self._feature_coord}
-
-    def _unstack_feats(self, A):
-        if len(self.feature_dims) > 1:
-            return A.unstack('feature')
-        else:
-            return A.rename({'feature': self.feature_dims[0]})
 
     def fit(self, A):
-        vals = self._data_matrix(A * np.sqrt(self.weights))
-        self._feature_coord = vals.feature
+        vals = self._rs(A * np.sqrt(self.weights))
         return self._model.fit(vals.data)
 
 
     def transform(self, A):
         # sample dims
-        vals = self._data_matrix(A * np.sqrt(self.weights))
+        vals = self._rs(A * np.sqrt(self.weights))
         dout = self._model.transform(vals.data)
         return unstack_array(dout, ['sample', 'mode'], vals.coords)
 
     def inverse_transform(self, A):
         dout = self._model.inverse_transform(A.data)
 
-        coord = {'sample': A.sample, 'feature': self._feature_coord}
+        coord = {'sample': A.sample, 'feature': self._rs.feature_coord}
         return  unstack_array(dout, ['sample', 'feature'], coord)\
-            .pipe(self._unstack_feats)
+            .pipe(self._rs.unstack_feats)
 
     @property
     def components_(self):
-        coords = {'feature': self._feature_coord}
+        coords = {'feature': self._rs.feature_coord}
         out =  unstack_array(self._model.components_, ['mode', 'feature'], coords)\
-               .pipe(self._unstack_feats) /np.sqrt(self.weights)
+               .pipe(self._rs.unstack_feats) /np.sqrt(self.weights)
 
         return out
 
