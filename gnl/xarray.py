@@ -125,11 +125,10 @@ def phaseshift_regular_grid(A, speed):
         The input data array can have any number of dimensions, but it must
         satisfy some simple properties:
 
-        1. periodicity in the 'x' direction
-        2. 'time' is the first dimension of the dataset
-        3. 'time' coord has units 's'
-        4. 'x' coord has units 'm'
-        5. 'x', and 'time' are defined on a regular grid
+        - periodicity in the 'x' direction
+        - 'time' is the first dimension of the dataset
+        - 'x', and 'time' are defined on a regular grid
+        - the units of speed are [x]/[time]
 
     speed: float
         The speed of waves to follow.
@@ -144,7 +143,7 @@ def phaseshift_regular_grid(A, speed):
 
     # Grid spacing
     dx = A.x[1] - A.x[0]
-    dt = (A.time[1] - A.time[0]) * 86400
+    dt = (A.time[1] - A.time[0])
 
     # shift = (-c * t, 0) = (- c * dt * i / dx)
     def indshift(i):
