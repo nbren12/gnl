@@ -10,6 +10,9 @@ import numpy as np
 import scipy.ndimage
 from . import util
 
+from operator import mul
+from functools import reduce
+
 
 ## ndimage wrapper
 class MetaNdImage(type):
@@ -204,6 +207,10 @@ class XRReshaper(object):
     def __init__(self, da):
         self._da = da
 
+    @property
+    def dims(self):
+        return self._da.dims
+
     def to(self, feature_dims):
         """Reshape data array into 2D array
 
@@ -237,13 +244,32 @@ class XRReshaper(object):
 
         return npa, dim_list
 
-    def get(self, arr, dims):
+    def get(self, arr, dims, extra_coords={}):
+
         coords = {}
+        unknown_dims = []
+        # get known coordinats
         for i, dim in enumerate(dims):
             if dim in self._da.coords:
                 coords[dim] = self._da[dim].values
-            else:
-                coords[dim] = np.arange(arr.shape[i])
+
+
+        # merge in extra coords
+        coords.update(extra_coords)
+
+        unknown_dims = [dim for dim in dims
+                        if dim not in coords]
+
+        # deal with unknown coords
+        if len(unknown_dims) == 0:
+            pass
+        elif len(unknown_dims) == 1:
+            n_known_coords = reduce(mul, (len(val) for _,val in coords.items()))
+            n_unknown_coord = arr.size / n_known_coords
+            coords[unknown_dims[0]] = np.arange(n_unknown_coord)
+        else:
+            print(unknown_dims)
+            raise ValueError("Only one unknown dim is allowed")
 
         # create new shape
         sh = [len(coords[dim]) for dim in dims]
@@ -252,7 +278,6 @@ class XRReshaper(object):
         arr = arr.reshape(sh)
 
         return xr.DataArray(arr, dims=dims, coords=coords)
-
 
 def coarsen(A, fun=np.mean, **kwargs):
     """Coarsen DataArray using reduction
