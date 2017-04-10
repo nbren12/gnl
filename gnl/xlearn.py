@@ -121,7 +121,7 @@ class XTransformerMixin(object):
 
         coord = {'sample': A.sample, 'feature': self._rs.feature_coord}
         return  unstack_array(dout, ['sample', 'feature'], coord)\
-            .pipe(self._rs.unstack_feats)
+            .pipe(self._rs.unstack_feats)/np.sqrt(self.weights)
 
     @property
     def components_(self):
