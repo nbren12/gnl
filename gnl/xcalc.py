@@ -44,6 +44,8 @@ def dask_centdiff(x, axis=-1, boundary='periodic'):
                          dtype=x.dtype)
 
 def centdiff(A, dim='x', boundary='periodic'):
+    if A.chunks is None:
+        A = A.chunk()
     dat = dask_centdiff(A.data, axis=A.get_axis_num(dim), boundary=boundary)
 
 
