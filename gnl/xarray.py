@@ -314,7 +314,7 @@ def coarsen(A, fun=np.mean, **kwargs):
 
     # this function needs a dask array to work
     if A.chunks is None:
-        A = A.chunk({k:len(v) for k,v in A.coords.items()})
+        A = A.chunk()
 
     coarse_dict = {A.get_axis_num(k): v for k,v in kwargs.items()}
     vals = da.coarsen(fun, A.data, coarse_dict)

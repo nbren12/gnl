@@ -197,7 +197,8 @@ def meanat(y, inds, axis):
 
     return ym
 
-
+def corr(x, y):
+    return x.dot(y) /np.sqrt(x.dot(x) * y.dot(y))
 
 ## numpy tricks
 def baxis(x, size):
