@@ -4,14 +4,16 @@
 """
 import functools
 import inspect
-import xarray as xr
+from functools import reduce
+from operator import mul
+
 import dask.array as da
 import numpy as np
 import scipy.ndimage
-from . import util
+import xarray as xr
+from scipy.interpolate import interp1d
 
-from operator import mul
-from functools import reduce
+from . import util
 
 
 ## ndimage wrapper
@@ -161,23 +163,6 @@ def phaseshift_regular_grid(A, speed):
         ndshift(A.values[it,...], indshift(it), output=C.values[it,...], mode='wrap')
 
     return C
-
-def roll(z, **kwargs):
-    """Rotate datarray periodically
-
-    Examples
-    --------
-    """
-    roll(U, x=400)
-    from scipy import ndimage
-    sw = [kwargs[dim] if dim in kwargs else 0 for dim in z.dims]
-
-    zout = ndimage.shift(z, sw, mode='wrap')
-
-    out = z.copy()
-    out.values = zout
-    return out
-
 
 def remove_repeats(data, dim='time'):
 
@@ -336,10 +321,28 @@ def coarsen(A, fun=np.mean, **kwargs):
                         name=A.name)
 
 
+def linint(left, right, dim):
+    """Interpolate one DataArray onto another along a given dimension
+
+    Parameters
+    ----------
+    left: xr.DataArray
+        coarse res dataarray
+    right: xr.DataArray or xr.Dataset
+        coarse res dataarray
+    dim: str
+        dimension name
+
+    Returns
+    -------
+    interpolated data: xr.DataArray
+    """
+    f = interp1d(left[dim], left, kind='linear', axis=left.get_axis_num(dim), bounds_error=False)
+    return xr.DataArray(f(right[dim]), dims=left.dims, coords=right.coords)
+
 # Add custom functions to DataArray class dynamically
 xr.DataArray.coarsen = coarsen
 xr.DataArray.integrate = integrate
-xr.DataArray.roll = roll
 xr.DataArray.remove_repeats = remove_repeats
 
 
@@ -354,6 +357,3 @@ def wrapcli(fun):
         return fun(*fun_args, **kwargs)
 
     return f
-
-
-
