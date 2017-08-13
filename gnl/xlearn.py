@@ -50,14 +50,20 @@ def unstack_array(x, dims, coords):
 class TruncatedSVD(object):
     """Dask friendly TruncatedSVD class
     """
-    def __init__(self, n_components=10, **kwargs):
-        self.n_components  = n_components
+    def __init__(self, **kwargs):
         self.svd_kwargs = kwargs
 
     def fit(self, A):
-        _, _, vt = svd_compressed(A, self.n_components, **self.svd_kwargs)
+
+        if not hasattr(A, 'dask'):
+            A = da.from_array(A, A.shape)
+
+        n_comps = self.svd_kwargs.pop('n_components')
+        _, _, vt = svd_compressed(A, n_comps, **self.svd_kwargs)
 
         self.components_ = vt
+
+        return self
 
     def transform(self, A):
         return A.dot(self.components_.T)
@@ -107,7 +113,8 @@ class XTransformerMixin(object):
 
     def fit(self, A):
         vals = self._rs(A * np.sqrt(self.weights))
-        return self._model.fit(vals.data)
+        self._model.fit(vals.data)
+        return self
 
 
     def transform(self, A):
