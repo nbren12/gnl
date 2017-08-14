@@ -8,12 +8,13 @@ import numpy as np                           # <---- New line
 import os
 os.environ['CC'] = 'gcc'
 cython_kw = dict(extra_compile_args=['-fopenmp'], extra_link_args=['-fopenmp'])
-ext_modules = [Extension("gnl.gslrand",
-                         sources = ["gnl/gslrand.pyx"],
-                         libraries = ['gsl', 'gslcblas'],
-                         include_dirs = ["gnl"],
-                         **cython_kw
-),
+ext_modules = [
+#Extension("gnl.gslrand",
+#                         sources = ["gnl/gslrand.pyx"],
+#                         libraries = ['gsl', 'gslcblas'],
+#                         include_dirs = ["gnl"],
+#                         **cython_kw
+#),
                Extension("gnl.pdes.tadmor.tadmor",
                          sources = ["gnl/pdes/tadmor/tadmor.pyx"],
                          libraries = [],
