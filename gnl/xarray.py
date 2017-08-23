@@ -321,6 +321,31 @@ def coarsen(A, fun=np.mean, **kwargs):
                         name=A.name)
 
 
+def xcorr(x, y=None, dim='time'):
+    """Compute cross correlation between two DataArrays
+    """
+
+    if y is None:
+        y = x.copy()
+    # demean the variables
+    x = x - x.mean(dim)
+    y = y - y.mean(dim)
+    # compute the ffts
+    axis = x.get_axis_num(dim)
+    fx = np.fft.fft(x, axis=axis)
+    fy = np.fft.fft(y, axis=axis)
+    # invert the psd
+    psd = fx*fy.conj()
+    ipsd = np.real(np.fft.ifft(psd, axis=axis))
+    # normalize
+    varx = (x**2).sum(dim)
+    vary = (y**2).sum(dim)
+    auto = xr.DataArray(ipsd, x.coords)/np.sqrt(varx*vary)
+    auto[dim] -= auto[dim][0]
+
+    return auto
+
+
 def linint(left, right, dim):
     """Interpolate one DataArray onto another along a given dimension
 
@@ -360,7 +385,7 @@ def wrapcli(fun):
 
 
 def xr2mat(fields, sample_dims, feature_dims,
-           scale=True, weight=None):
+           scale=True, weight=1.0):
     """Prepare list of data arrays for input to Machine Learning
 
     Parameters
@@ -384,13 +409,16 @@ def xr2mat(fields, sample_dims, feature_dims,
     """
     normalize_dim='z'   # this could be an argument
 
-    fields = xr.merge(fields)
+    if not isinstance(fields, xr.Dataset):
+        fields = xr.merge(fields)
     dat = fields.to_array() * weight
 
     if scale:
         mu = dat.mean(sample_dims)
         V = np.sqrt(integrate((dat-mu)**2, normalize_dim)).mean(sample_dims)
         dat = (dat-mu)/V
+    else:
+        V = None
 
-    return dat.stack(features=('variable',)+feature_dims, samples=sample_dims)\
+    return dat.stack(features=('variable',)+tuple(feature_dims), samples=sample_dims)\
               .transpose('samples', 'features'), V
