@@ -385,7 +385,7 @@ def wrapcli(fun):
 
 
 def xr2mat(fields, sample_dims, feature_dims,
-           scale=True, weight=1.0):
+           scale=True):
     """Prepare list of data arrays for input to Machine Learning
 
     Parameters
@@ -398,9 +398,6 @@ def xr2mat(fields, sample_dims, feature_dims,
         dimensions which be considered features
     scale: Bool
         center and scale the output. [default: True]
-    weight: xarray
-        weight the xarray fields using this object. Typically,
-        np.sqrt(rho)/integrate(rho, 'z') for mass aware methods.
 
     Returns
     -------
@@ -411,14 +408,16 @@ def xr2mat(fields, sample_dims, feature_dims,
 
     if not isinstance(fields, xr.Dataset):
         fields = xr.merge(fields)
-    dat = fields.to_array() * weight
+
+    dat = fields.to_array()
 
     if scale:
         mu = dat.mean(sample_dims)
-        V = np.sqrt(integrate((dat-mu)**2, normalize_dim)).mean(sample_dims)
+        V = np.sqrt(((dat-mu)**2).sum(normalize_dim)).mean(sample_dims)
         dat = (dat-mu)/V
     else:
         V = None
 
-    return dat.stack(features=('variable',)+tuple(feature_dims), samples=sample_dims)\
-              .transpose('samples', 'features'), V
+    stacked =  dat.stack(features=('variable',)+tuple(feature_dims), samples=sample_dims)\
+              
+    return stacked.transpose('samples', 'features'), V
