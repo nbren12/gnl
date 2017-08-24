@@ -11,7 +11,7 @@ from scipy.ndimage import correlate1d
 from numba import jit
 from ..fab import MultiFab
 
-from .tadmor import Tadmor2DBase
+from .tadmor import Tadmor2DBase, convergence
 
 
 
