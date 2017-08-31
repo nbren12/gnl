@@ -2,7 +2,7 @@
 """
 from functools import partial
 import numpy as np
-import xarray as xr 
+import xarray as xr
 
 import dask.array as da
 from dask.array.reductions import cumreduction
@@ -10,38 +10,19 @@ from dask.diagnostics import ProgressBar
 from dask import delayed
 
 
-
-def dask_centdiff(x, axis=-1, boundary='periodic'):
+def dask_centdiff(x, axis=-1, boundary='reflect'):
 
     nblock = len(x.chunks[axis])
 
-    def f(x, block_id=None):
-        y = x.swapaxes(axis, 0)
-
-        if boundary == 'extrap':
-            if block_id[axis] == 0:
-                y[0] = 2 * y[1] - y[2]
-            if block_id[axis] == nblock - 1:
-                y[-1] = 2 * y[-2] - y[-3]
-        elif boundary == 'periodic':
-            pass
-        else:
-            raise NotImplementedError("Boundary type `{}` not implemented".format(boundary))
-
-
-        dy =  np.roll(y, -1, 0) - np.roll(y,1, 0)
-
-        return dy.swapaxes(axis, 0)
-
+    def f(x):
+        return  np.roll(y, -1, axis) - np.roll(y,1, axis)
 
     depth = {axis:1}
+    bndy = {axis: boundary}
 
-    # the ghost cell filling is handled by f
-    bndy = {axis: 'periodic'}
-
-    return x.map_overlap(f, depth,
-                         boundary=bndy,
-                         dtype=x.dtype)
+    return da.ghost.map_overlap(x, f, {axis: 1},
+                                boundary={axis: boundary},
+                                dtype=x.dtype)
 
 def centdiff(A, dim='x', boundary='periodic'):
     if A.chunks is None:

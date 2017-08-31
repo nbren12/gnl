@@ -1,4 +1,5 @@
 import numpy as np
+import xarray as xr
 from .xcalc import centderiv, centspacing, cumtrapz
 from .datasets import tiltwave
 
@@ -11,7 +12,7 @@ def test_centdiff():
     B = A.centderiv(dim='z', boundary='extrap')
 
 
-    if False:
+    if True:
         import matplotlib as mpl
         import matplotlib.pyplot as plt
 
