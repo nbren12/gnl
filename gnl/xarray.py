@@ -404,7 +404,7 @@ def xr2mat(fields, sample_dims, feature_dims,
     data: DataArray
     scaling: DataArray or None
     """
-    normalize_dim='z'   # this could be an argument
+    normalize_dim = 'z'   # this could be an argument
 
     if not isinstance(fields, xr.Dataset):
         fields = xr.merge(fields)
@@ -418,6 +418,25 @@ def xr2mat(fields, sample_dims, feature_dims,
     else:
         V = None
 
-    stacked =  dat.stack(features=('variable',)+tuple(feature_dims), samples=sample_dims)\
-              
+    stacked = dat.stack(features=('variable',)+tuple(feature_dims),
+                        samples=sample_dims)
     return stacked.transpose('samples', 'features'), V
+
+
+def map_overlap(x, func, depth, boundary=None, **kwargs):
+    """An XArray wrapper for dask.ghost.map_overlap
+
+    See the API for that function for more info.
+    """
+
+    # parse dimensions into axis numbers
+    dask_depth = {x.get_axis_num(dim): v for dim, v in depth.items()}
+
+    if boundary is not None:
+        dask_bndy = {x.get_axis_num(dim): v for dim, v in boundary.items()}
+
+    out_dask = da.ghost.map_overlap(x.data, func, dask_depth,
+                                    boundary=dask_bndy,
+                                    **kwargs)
+
+    return xr.DataArray(out_dask, x.coords)

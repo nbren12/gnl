@@ -52,3 +52,12 @@ def test_wrapcli():
 
     AB = theta("A", "B", data=["test.nc", "testB.nc"])
 
+
+def test_map_overlap():
+    a = tiltwave()
+
+    def fun(x):
+        return x
+
+    y = xarray.map_overlap(a.chunk(), fun, {'x': 1}, {'x': 'periodic'})
+    np.testing.assert_allclose(y.values, a.values)
