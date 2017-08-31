@@ -1,22 +1,35 @@
+"""Test for gnl.xcalc
+"""
 import numpy as np
+import dask.array as da
 import xarray as xr
-from .xcalc import centderiv, centspacing, cumtrapz
+
 from .datasets import tiltwave
+from .xcalc import centderiv, centspacing, dask_centdiff
+
+
+def test_dask_centderiv():
+    x, y = np.mgrid[0:2 * np.pi:10j, 0:2 * np.pi:10j]
+
+    z = da.from_array(x, chunks=(10, 10))
+    dz = dask_centdiff(z, axis=0, boundary='periodic')
+
+    dx = np.roll(x, -1, 0) - np.roll(x, 1, 0)
+    np.testing.assert_allclose(dx, dz.compute())
 
 
 def test_centdiff():
 
     A = tiltwave().chunk()
 
-    B = centderiv(A, dim='z', boundary='extrap')
-    B = A.centderiv(dim='z', boundary='extrap')
-
+    B = centderiv(A, dim='z')
+    B = A.centderiv(dim='z')
 
     if True:
         import matplotlib as mpl
         import matplotlib.pyplot as plt
 
-        fig, (a,b) = plt.subplots(1,2)
+        fig, (a, b) = plt.subplots(1, 2)
         B.plot(ax=a)
 
         A.plot(ax=b)
@@ -26,7 +39,7 @@ def test_centdiff():
 def test_centspacing():
     x = np.arange(5)
 
-    xd = xr.DataArray(x, coords=( ('x', x), ))
+    xd = xr.DataArray(x, coords=(('x', x), ))
 
     dx = centspacing(xd).values
 
@@ -34,15 +47,12 @@ def test_centspacing():
 
 
 def test_cumtrapz():
-    A = tiltwave().chunk({'z':5})
+    A = tiltwave().chunk({'z': 5})
 
     from scipy.integrate import cumtrapz
 
-
-
-
-    res_scipy = cumtrapz(A.values, A.z.values,
-                         axis=A.get_axis_num('z'), initial=0)
+    res_scipy = cumtrapz(
+        A.values, A.z.values, axis=A.get_axis_num('z'), initial=0)
 
     res_xr = A.cumtrapz('z').values
     np.testing.assert_array_almost_equal(res_scipy, res_xr)

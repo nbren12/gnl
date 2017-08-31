@@ -1,28 +1,21 @@
 """Calculus for xarray data
 """
-from functools import partial
 import numpy as np
 import xarray as xr
 
 import dask.array as da
-from dask.array.reductions import cumreduction
-from dask.diagnostics import ProgressBar
-from dask import delayed
-
 
 def dask_centdiff(x, axis=-1, boundary='reflect'):
+    """Compute centered difference using dask
+    """
 
-    nblock = len(x.chunks[axis])
+    def fun(x):
+        return  np.roll(x, -1, axis) - np.roll(x, 1, axis)
 
-    def f(x):
-        return  np.roll(y, -1, axis) - np.roll(y,1, axis)
-
-    depth = {axis:1}
-    bndy = {axis: boundary}
-
-    return da.ghost.map_overlap(x, f, {axis: 1},
+    return da.ghost.map_overlap(x, fun, {axis: 1},
                                 boundary={axis: boundary},
                                 dtype=x.dtype)
+
 
 def centdiff(A, dim='x', boundary='periodic'):
     if A.chunks is None:
@@ -39,6 +32,7 @@ def centdiff(A, dim='x', boundary='periodic'):
 
     return xdat
 
+
 def centspacing(x):
     """Return spacing of a given xarray coord object
     """
@@ -49,7 +43,7 @@ def centspacing(x):
 
     xpad = np.r_[2*x[0]-x[1], x, 2* x[-1] - x[-2]]
 
-    dx.values=  xpad[2:] - xpad[:-2]
+    dx.values = xpad[2:] - xpad[:-2]
 
     return dx
 
