@@ -1,7 +1,7 @@
 """Module for converting xarray datasets to and from matrix formats for Machine
 learning purposes.
-
 """
+from functools import partial
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -119,11 +119,10 @@ class Normalizer(object):
     def _get_normalization(self, data):
         sig = data.std(self.sample_dims)
         if set(self.weight.dims) <= set(sig.dims):
-            sig = np.sqrt(((sig * self.weight)**2).sum(self.weight.dims))
-
+            sig = np.sqrt((sig) ** 2 * self.weight).sum(self.weight.dims)
         return sig
 
-    def normalize(self, data):
+    def transform(self, data):
         out = data
         if self.center:
             self.mean_ = out.mean(self.sample_dims)
@@ -135,13 +134,44 @@ class Normalizer(object):
 
         return out
 
-    def unnormalize(self, data):
+    def inverse_transform(self, data):
         return data * self.scale_ + self.mean_
 
 
 def _assert_dataset_approx_eq(D, x):
     for k in D.data_vars:
         np.testing.assert_allclose(D[k], x[k].transpose(*D[k].dims))
+
+
+def _mul_if_share_dims(w, d):
+    """Useful for multiplying by weight
+    """
+    if set(d.dims) >= set(w.dims):
+        return d * w
+    else:
+        return d
+
+
+class NormalizedDataMatrix(object):
+    """Class for computing Normalized data matrices
+    """
+
+    def __init__(self, scale=True, center=True, weight=None,
+                 sample_dims=[], feature_dims=[], variables=[]):
+        self.dm_ = DataMatrix(sample_dims, feature_dims, variables)
+        self.norm_ = Normalizer(scale=scale, center=center, weight=weight,
+                                sample_dims=sample_dims)
+
+    def transform(self, data):
+        data = self.norm_.transform(data)
+        f = partial(_mul_if_share_dims, np.sqrt(self.weight))
+        return self.dm_.dataset_to_mat(data.apply(f))
+
+    def inverse_transform(self, arr):
+        data = self.dm_.mat_to_dataset(arr)
+        f = partial(_mul_if_share_dims, 1/np.sqrt(self.weight))
+        return self.norm_.inverse_transform(data.apply(f))
+
 
 
 def test_datamatrix():
@@ -175,7 +205,7 @@ def test_normalizer():
 
     w = np.exp(-a.z/10e3/2)
     norm = Normalizer(sample_dims=['x'], weight=w)
-    d_norm = norm.normalize(D)
+    d_norm = norm.transform(D)
     scales = d_norm.apply(norm._get_normalization)
 
     for k in scales:
