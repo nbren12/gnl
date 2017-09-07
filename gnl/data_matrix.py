@@ -119,7 +119,7 @@ class Normalizer(object):
     def _get_normalization(self, data):
         sig = data.std(self.sample_dims)
         if set(self.weight.dims) <= set(sig.dims):
-            sig = (sig * self.weight).sum(self.weight.dims)
+            sig = np.sqrt(((sig * self.weight)**2).sum(self.weight.dims))
 
         return sig
 
@@ -174,10 +174,9 @@ def test_normalizer():
     D = xr.Dataset({'a': a, 'b': b, 'c': a.isel(z=10)})
 
     w = np.exp(-a.z/10e3/2)
-    norm =  Normalizer(sample_dims=['x'], weight=w)
+    norm = Normalizer(sample_dims=['x'], weight=w)
     d_norm = norm.normalize(D)
     scales = d_norm.apply(norm._get_normalization)
 
     for k in scales:
         np.testing.assert_allclose(scales[k], 1.0)
-
