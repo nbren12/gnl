@@ -108,6 +108,39 @@ class DataMatrix(object):
             return x
 
 
+class Normalizer(object):
+    def __init__(self, scale=True, center=True, weight=None,
+                 sample_dims=()):
+        self.scale = scale
+        self.center = center
+        self.weight = weight
+        self.sample_dims = sample_dims
+
+    def _get_normalization(self, data):
+
+        sample_dims = list(self.sample_dims)
+        if set(self.weight.dims) < set(data.dims):
+            data = data * self.weight
+            sample_dims += self.weight.dims
+
+        return data.std(sample_dims)
+
+    def normalize(self, data):
+        out = data
+        if self.center:
+            self.mean_ = out.mean(self.sample_dims)
+            out = out - self.mean_
+
+        if self.scale:
+            self.scale_ = out.apply(self._get_normalization)
+            out = out / self.scale_
+
+        return out
+
+    def unnormalize(self, data):
+        return data * self.scale_ + self.mean_
+
+
 def _assert_dataset_approx_eq(D, x):
     for k in D.data_vars:
         np.testing.assert_allclose(D[k], x[k].transpose(*D[k].dims))
