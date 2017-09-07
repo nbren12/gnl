@@ -158,9 +158,10 @@ class NormalizedDataMatrix(object):
 
     def __init__(self, scale=True, center=True, weight=None,
                  sample_dims=[], feature_dims=[], variables=[]):
-        self.dm_ = DataMatrix(sample_dims, feature_dims, variables)
+        self.dm_ = DataMatrix(feature_dims, sample_dims, variables)
         self.norm_ = Normalizer(scale=scale, center=center, weight=weight,
                                 sample_dims=sample_dims)
+        self.weight = weight
 
     def transform(self, data):
         data = self.norm_.transform(data)
