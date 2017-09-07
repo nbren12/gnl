@@ -117,13 +117,11 @@ class Normalizer(object):
         self.sample_dims = sample_dims
 
     def _get_normalization(self, data):
+        sig = data.std(self.sample_dims)
+        if set(self.weight.dims) <= set(sig.dims):
+            sig = (sig * self.weight).sum(self.weight.dims)
 
-        sample_dims = list(self.sample_dims)
-        if set(self.weight.dims) < set(data.dims):
-            data = data * self.weight
-            sample_dims += self.weight.dims
-
-        return data.std(sample_dims)
+        return sig
 
     def normalize(self, data):
         out = data
@@ -165,3 +163,21 @@ def test_datamatrix():
     x0 = mat.mat_to_dataset(y[0])
     d0 = D.isel(x=0)
     _assert_dataset_approx_eq(d0, x0)
+
+
+def test_normalizer():
+    from gnl.datasets import tiltwave
+
+    # setup data
+    a = tiltwave()
+    b = a.copy()
+    D = xr.Dataset({'a': a, 'b': b, 'c': a.isel(z=10)})
+
+    w = np.exp(-a.z/10e3/2)
+    norm =  Normalizer(sample_dims=['x'], weight=w)
+    d_norm = norm.normalize(D)
+    scales = d_norm.apply(norm._get_normalization)
+
+    for k in scales:
+        np.testing.assert_allclose(scales[k], 1.0)
+
