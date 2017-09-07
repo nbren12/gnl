@@ -119,7 +119,7 @@ class Normalizer(object):
     def _get_normalization(self, data):
         sig = data.std(self.sample_dims)
         if set(self.weight.dims) <= set(sig.dims):
-            sig = np.sqrt((sig) ** 2 * self.weight).sum(self.weight.dims)
+            sig = (sig ** 2 * self.weight).sum(self.weight.dims).pipe(np.sqrt)
         return sig
 
     def transform(self, data):
@@ -156,22 +156,35 @@ class NormalizedDataMatrix(object):
     """Class for computing Normalized data matrices
     """
 
-    def __init__(self, scale=True, center=True, weight=None,
+    def __init__(self, scale=True, center=True, weight=None, apply_weight=False,
                  sample_dims=[], feature_dims=[], variables=[]):
+        """
+        Parameters
+        ----------
+        apply_weight: Bool
+            if True weight the output by sqrt of the weight. [default: False]
+        **kwargs:
+            arguments for DataMatrix and Normalizers classes
+        """
         self.dm_ = DataMatrix(feature_dims, sample_dims, variables)
         self.norm_ = Normalizer(scale=scale, center=center, weight=weight,
                                 sample_dims=sample_dims)
         self.weight = weight
+        self.apply_weight = apply_weight
 
     def transform(self, data):
         data = self.norm_.transform(data)
-        f = partial(_mul_if_share_dims, np.sqrt(self.weight))
-        return self.dm_.dataset_to_mat(data.apply(f))
+        if self.apply_weight:
+            f = partial(_mul_if_share_dims, np.sqrt(self.weight))
+            data = data.apply(f)
+        return self.dm_.dataset_to_mat(data)
 
     def inverse_transform(self, arr):
         data = self.dm_.mat_to_dataset(arr)
-        f = partial(_mul_if_share_dims, 1/np.sqrt(self.weight))
-        return self.norm_.inverse_transform(data.apply(f))
+        if self.apply_weight:
+            f = partial(_mul_if_share_dims, 1/np.sqrt(self.weight))
+            data = data.apply(f)
+        return self.norm_.inverse_transform(data)
 
 
 
