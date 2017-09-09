@@ -68,9 +68,9 @@ def sparsify_inds(inds, tensor):
     return out
 
 
-def flux_div_u():
+def flux_div_u(n=3):
     # flux terms in u equation no need to invert using mass matrix
-    l, k, m = np.mgrid[0:3, 0:3, 0:3]
+    l, k, m = np.mgrid[0:n, 0:n, 0:n]
     flux_tensor = Au(l, k, m)
     div_tensor = +Bu(l, k, m)
 
@@ -79,9 +79,9 @@ def flux_div_u():
     return flux_tensor, div_tensor
 
 
-def flux_div_t():
+def flux_div_t(n=3):
     # temperature equation
-    l, k, m = np.mgrid[0:3, 0:3, 0:3]
+    l, k, m = np.mgrid[0:n, 0:n, 0:n]
     flux_tensor = At(l, k, m)
 
     div_tensor = +At(l, k, m) + Bt(l, k, m)

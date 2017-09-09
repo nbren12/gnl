@@ -6,7 +6,7 @@ import numpy as np                           # <---- New line
 
 
 import os
-os.environ['CC'] = 'gcc'
+os.environ['CC'] = 'gcc-7'
 cython_kw = dict(extra_compile_args=['-fopenmp'], extra_link_args=['-fopenmp'])
 ext_modules = [
 #Extension("gnl.gslrand",
