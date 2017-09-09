@@ -406,7 +406,12 @@ def xr2mat(fields, sample_dims, feature_dims,
     -------
     data: DataArray
     scaling: DataArray or None
+
+    See Also
+    --------
+    gnl.data_matrix.DataMatrix : better version of this function
     """
+    raise DeprecationWarning("Please switch to gnl.data_matrix.DataMatrix")
     normalize_dim = 'z'   # this could be an argument
 
     if not isinstance(fields, xr.Dataset):
