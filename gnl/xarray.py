@@ -16,7 +16,7 @@ from scipy.interpolate import interp1d
 from . import util
 
 
-## ndimage wrapper
+# ndimage wrapper
 class MetaNdImage(type):
     def __new__(cls, name, parents, dct):
 
@@ -27,7 +27,7 @@ class MetaNdImage(type):
             else:
                 dct[func_name] = MetaNdImage.wrappernd(func)
             # setattr(xr.DataArray, 'ndimage_' + func_name, ndimage_wrapper(func))
-        return  super(MetaNdImage, cls).__new__(cls, name, parents, dct)
+        return super(MetaNdImage, cls).__new__(cls, name, parents, dct)
 
 
     def wrappernd(func):
@@ -66,6 +66,7 @@ class MetaNdImage(type):
             return y
 
         return f
+
 
 @xr.register_dataarray_accessor('ndimage')
 class NdImageAccesor(metaclass=MetaNdImage):
@@ -164,6 +165,7 @@ def phaseshift_regular_grid(A, speed):
 
     return C
 
+
 def remove_repeats(data, dim='time'):
 
     dval = data.coords[dim].values
@@ -215,8 +217,7 @@ class XRReshaper(object):
         A = self._da
 
 
-        dim_list = [dim for dim in A.dims if dim not in feature_dims] \
-                    + feature_dims
+        dim_list = [dim for dim in A.dims if dim not in feature_dims] + feature_dims
 
         axes_list = [A.get_axis_num(dim) for dim in dim_list]
 
@@ -263,6 +264,7 @@ class XRReshaper(object):
         arr = arr.reshape(sh)
 
         return xr.DataArray(arr, dims=dims, coords=coords)
+
 
 def coarsen(A, fun=np.mean, **kwargs):
     """Coarsen DataArray using reduction
@@ -364,6 +366,7 @@ def linint(left, right, dim):
     """
     f = interp1d(left[dim], left, kind='linear', axis=left.get_axis_num(dim), bounds_error=False)
     return xr.DataArray(f(right[dim]), dims=left.dims, coords=right.coords)
+
 
 # Add custom functions to DataArray class dynamically
 xr.DataArray.coarsen = coarsen

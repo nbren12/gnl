@@ -5,12 +5,13 @@ import xarray as xr
 
 import dask.array as da
 
+
 def dask_centdiff(x, axis=-1, boundary='reflect'):
     """Compute centered difference using dask
     """
 
     def fun(x):
-        return  np.roll(x, -1, axis) - np.roll(x, 1, axis)
+        return np.roll(x, -1, axis) - np.roll(x, 1, axis)
 
     return da.ghost.map_overlap(x, fun, {axis: 1},
                                 boundary={axis: boundary},
@@ -76,10 +77,10 @@ def cumtrapz(A, dim):
     dx = x - x.shift(**{dim:1})
     dx = dx.fillna(0.0)
     return ((A.shift(**{dim:1}) + A)*dx/2.0)\
-          .fillna(0.0)\
-          .cumsum(dim)
+        .fillna(0.0)\
+        .cumsum(dim)
 
 
-## monkey patch DataArray class
+# monkey patch DataArray class
 xr.DataArray.centderiv = centderiv
 xr.DataArray.cumtrapz = cumtrapz
