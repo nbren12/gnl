@@ -37,21 +37,26 @@ class DataMatrix(object):
         return self.dims['samples']
 
     def dataset_to_mat(self, X):
-        Xs = X.stack(samples=self.sample_dims, features=self.feature_dims)\
-              .transpose('samples', 'features')
 
-        self._var_coords = {k: Xs[k].coords for k in self.variables}
+        def mystack(val):
+            feature_dims = ['variable']\
+                           + self.feature_dims
+            assign_coords = dict(variable=val.name)
+            for dim in feature_dims:
+                if (dim not in val) and dim != 'variable':
+                    assign_coords[dim] = None
 
-        # store offsets
-        offset = 0
-        self._var_slices = {}
-        one_sample = Xs.isel(samples=0)
-        for k in self.variables:
-            nfeat = one_sample[k].size
-            self._var_slices[k] = slice(offset, offset+nfeat)
-            offset += nfeat
+            expand_dims = set(feature_dims).difference(set(val.dims))
+            return val.assign_coords(**assign_coords)\
+                      .expand_dims(expand_dims)\
+                      .stack(features=feature_dims, samples=self.sample_dims)
 
-        return np.hstack(self.column_var(Xs[k]) for k in self.variables)
+        Xs = [mystack(val) for _, val in X.data_vars.items()]
+
+        catted = xr.concat(Xs, dim='features')\
+                   .transpose('samples', 'features')
+        self._coords = catted.coords
+        return catted
 
     def mat_to_dataset(self, X, new_dim_name='m'):
         """Munge 2d array into xarray object matching input to dataset_to_mat
@@ -71,35 +76,30 @@ class DataMatrix(object):
         dataset: xr.Dataset
         """
 
+        # Generate coordinates of data matrix
+        coords = self._coords
+        if X.ndim == 1:
+            coords = (coords['features'],)
+        elif X.shape[0] == 1:
+            coords = (coords['features'],)
+            X = X[0, :]
+        elif len(coords['samples']) != X.shape[0]:
+            new_sample_idx = pd.Index(np.arange(X.shape[0]),
+                                      name=new_dim_name)
+            coords = (new_sample_idx, coords['features'])
+
+        # stacked data array
+        xarr = xr.DataArray(X, coords)
+
+        # unstack variables
+        # unstacking automatically happens in sel
         data_dict = {}
-
         for k in self.variables:
-            coords = self._var_coords[k]
+            data_dict[k] = xarr.sel(variable=k).squeeze(drop=True)
 
-            # need data to be 2d
-            if X.ndim == 2:
-                data = X[:, self._var_slices[k]]
-            else:
-                data = X[None, self._var_slices[k]]
-
-            if data.shape[1] == 1:
-                data = data[:, 0]
-
-            # create new index if shapes don't match
-            if data.shape[0] == 1:
-                coords = (coords['features'],)
-                data = data[0, :]
-            elif len(coords['samples']) != data.shape[0]:
-                new_sample_idx = pd.Index(np.arange(data.shape[0]),
-                                          name=new_dim_name)
-                coords = (new_sample_idx, coords['features'])
-
-            xarr = xr.DataArray(data, coords, name=k)
-            rename_dict = {dim: val if isinstance(val, str) else val[0]
-                           for dim, val in self.dims.items()}
-            data_dict[k] = _unstack_rename(xarr, rename_dict)
-
-        return xr.Dataset(data_dict)
+        # unstacked dataset
+        D = xr.Dataset(data_dict)
+        return _unstack_rename(D, {'samples': self.sample_dims[0]})
 
     def column_var(self, x):
         if x.ndim == 1:
@@ -156,8 +156,9 @@ class NormalizedDataMatrix(object):
     """Class for computing Normalized data matrices
     """
 
-    def __init__(self, scale=True, center=True, weight=None, apply_weight=False,
-                 sample_dims=[], feature_dims=[], variables=[]):
+    def __init__(self, scale=True, center=True, weight=None,
+                 apply_weight=False, sample_dims=[],
+                 feature_dims=[], variables=[]):
         """
         Parameters
         ----------
@@ -187,7 +188,6 @@ class NormalizedDataMatrix(object):
         return self.norm_.inverse_transform(data)
 
 
-
 def test_datamatrix():
     from gnl.datasets import tiltwave
 
@@ -199,6 +199,8 @@ def test_datamatrix():
     mat = DataMatrix(['z'], ['x'], ['a', 'b'])
     y = mat.dataset_to_mat(D)
 
+    assert y.dims == ('samples', 'features')
+
     x = mat.mat_to_dataset(y)
 
     _assert_dataset_approx_eq(D, x)
@@ -207,6 +209,14 @@ def test_datamatrix():
     x0 = mat.mat_to_dataset(y[0])
     d0 = D.isel(x=0)
     _assert_dataset_approx_eq(d0, x0)
+
+    # test when variables have different dimensionality
+    D = xr.Dataset({'a': a, 'b': b.isel(z=0)})
+    mat = DataMatrix(['z'], ['x'], ['a', 'b'])
+    y = mat.dataset_to_mat(D)
+    assert y.dims == ('samples', 'features')
+    x = mat.mat_to_dataset(y)
+    _assert_dataset_approx_eq(D, x)
 
 
 def test_normalizer():
@@ -224,3 +234,7 @@ def test_normalizer():
 
     for k in scales:
         np.testing.assert_allclose(scales[k], 1.0)
+
+
+if __name__ == '__main__':
+    test_datamatrix()
