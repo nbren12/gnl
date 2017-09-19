@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import xray
 import netCDF4 as nc
 
 from numpy.fft import fft, ifft, fftshift, fftfreq
