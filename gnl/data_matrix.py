@@ -51,7 +51,7 @@ class DataMatrix(object):
                       .expand_dims(expand_dims)\
                       .stack(features=feature_dims, samples=self.sample_dims)
 
-        Xs = [mystack(val) for _, val in X.data_vars.items()]
+        Xs = [mystack(X[key]) for key in self.variables]
 
         catted = xr.concat(Xs, dim='features')\
                    .transpose('samples', 'features')
@@ -217,6 +217,16 @@ def test_datamatrix():
     assert y.dims == ('samples', 'features')
     x = mat.mat_to_dataset(y)
     _assert_dataset_approx_eq(D, x)
+
+    # test that the variables of the output are the desired ones
+    # this caused a really ugly bug
+    D = xr.Dataset({'a': a, 'b': b, 'c': b+1})
+    variables = ['b', 'c']
+    mat = DataMatrix(['z'], ['x'], variables)
+    y = mat.dataset_to_mat(D)
+    output_vars = set(y.unstack('features')['variable'].values)
+    assert set(variables) == output_vars
+
 
 
 def test_normalizer():
