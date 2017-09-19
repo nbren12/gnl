@@ -5,6 +5,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 import xarray as xr
+import xarray.ufuncs as xu
 
 
 def _unstack_rename(xarr, rename_dict):
@@ -122,6 +123,9 @@ class Normalizer(object):
             sig = (sig ** 2 * self.weight).sum(self.weight.dims).pipe(np.sqrt)
         return sig
 
+    def fit(self, data):
+        self.scale_ = data.apply(self._get_normalization)
+
     def transform(self, data):
         out = data
         if self.center:
@@ -136,6 +140,17 @@ class Normalizer(object):
 
     def inverse_transform(self, data):
         return data * self.scale_ + self.mean_
+
+    @property
+    def matrix(self):
+        """Return the normalizing weights in an xarray
+
+        The weights are proportional to sig * sqrt(w). I could have used sig**2
+        w as the convention, but this is more useful.
+        """
+        scale = self.scale_
+        w = self.weight
+        return xu.sqrt(w) * scale
 
 
 def _assert_dataset_approx_eq(D, x):
@@ -245,6 +260,14 @@ def test_normalizer():
     for k in scales:
         np.testing.assert_allclose(scales[k], 1.0)
 
+    # test weight matrix
+    normalizer = norm.matrix
+
+    print((normalizer**2 * w).sum('z'), scales)
+    _assert_dataset_approx_eq((D-D.mean('x'))/(normalizer**2).sum('z').pipe(np.sqrt),
+                              d_norm)
+
+    
 
 if __name__ == '__main__':
     test_datamatrix()

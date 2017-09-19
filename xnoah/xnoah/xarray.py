@@ -13,8 +13,6 @@ import scipy.ndimage
 import xarray as xr
 from scipy.interpolate import interp1d
 
-from . import util
-
 
 ## ndimage wrapper
 class MetaNdImage(type):
@@ -105,8 +103,9 @@ def phaseshift(u500, c=0):
     """
     phaseshift data into a travelling wave frame
     """
+    from gnl.util import phaseshift
     # TODO: add arguments for x and time names
-    z = util.phaseshift(
+    z = phaseshift(
         u500.x.values,
         u500.time.values,
         u500.values,
