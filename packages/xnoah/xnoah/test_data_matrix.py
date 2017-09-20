@@ -2,6 +2,7 @@
 learning purposes.
 """
 import numpy as np
+import pandas as pd
 import xarray as xr
 import pytest
 
@@ -78,6 +79,20 @@ def test_stack_cat():
             .transpose('x', 'features')
     x = unstack_cat(y, 'features')
     _assert_dataset_approx_eq(D, x)
+
+    # another test
+    ds = D.isel(z=0)
+    ds_flat = stack_cat(ds, 'features', ['x'])
+    ds_comp = unstack_cat(ds_flat, 'features')
+    _assert_dataset_approx_eq(ds, ds_comp)
+
+    # test for scalar variables
+    a = xr.DataArray(np.r_[:6], dims=('x'), coords={'x': np.r_[:6]})
+    ds = xr.Dataset({'a': a, 'b': 1.0})
+    ds_flat = stack_cat(ds, 'features', ['x'])
+    ds_comp = unstack_cat(ds_flat, 'features')
+    _assert_dataset_approx_eq(ds, ds_comp)
+
 
 
 
