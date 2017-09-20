@@ -5,7 +5,7 @@ import numpy as np
 import xarray as xr
 
 from .datasets import tiltwave
-from .data_matrix import DataMatrix, Normalizer, dataset_to_mat
+from .data_matrix import DataMatrix, Normalizer, dataset_to_mat, compute_weighted_scale
 
 
 def _assert_dataset_approx_eq(D, x):
@@ -53,7 +53,7 @@ def test_normalizer():
     w /= w.sum()
     norm = Normalizer(sample_dims=['x'], weight=w)
     d_norm = norm.transform(D)
-    scales = d_norm.apply(norm._get_normalization)
+    scales = compute_weighted_scale(weight=w, sample_dims=['x'], ds=d_norm)
 
     for k in scales:
         np.testing.assert_allclose(scales[k], 1.0)
