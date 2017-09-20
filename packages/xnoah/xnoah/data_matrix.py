@@ -2,6 +2,7 @@
 learning purposes.
 """
 from functools import partial
+from typing import Sequence
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -29,32 +30,68 @@ def compute_weighted_scale(weight, sample_dims, ds):
     return ds.apply(f)
 
 
+def _stack_cat_once(ds: xr.Dataset, new_dim, dims, variable_dim='variable'):
+    """Stack dimensions and variables of a Dataset
+
+    Parameters
+    ----------
+    ds: xr.Dataset
+    dims: Sequence
+
+    Returns
+    -------
+    xr.DataArray
+    """
+
+    def f(val):
+        # ensure square output
+
+        assign_coords = {variable_dim: val.name}
+        for dim in dims:
+            if (dim not in val):
+                assign_coords[dim] = None
+
+        expand_dims = set(dims).difference(set(val.dims))
+        expand_dims.add('variable')
+        return val.assign_coords(**assign_coords) \
+            .expand_dims(expand_dims) \
+            .stack(**{new_dim: (variable_dim,) + dims})
+
+    if isinstance(ds, xr.Dataset):
+        Xs = [f(ds[key]) for key in ds.data_vars]
+        return xr.concat(Xs, dim=new_dim)
+    elif isinstance(ds, xr.DataArray):
+        return ds.stack(**{new_dim: dims})
+    else:
+        raise ValueError("Input must be a xr.DataArray or xr.Dataset")
+
+
+def stack_cat(ds: xr.Dataset, variable_dim='variable', **kwargs):
+    """Dataset aware version of xr.stack
+    
+    Parameters
+    ----------
+    ds
+    kwargs
+    variable_dim
+
+    Returns
+    -------
+
+    """
+    for new_dim, dims in kwargs.items():
+        ds = _stack_cat_once(ds, new_dim, dims, variable_dim=variable_dim)
+    return ds
+
+
 def dataset_to_mat(X, sample_dims):
     sample_dims = tuple(sample_dims)
 
     # all the dimensions which are not sample dims are feature dims
     feature_dims = tuple(dim for dim in X.dims
                          if dim not in sample_dims)
-
-    def mystack(val):
-        # ensure square output
-
-        assign_coords = dict(variable=val.name)
-        for dim in feature_dims:
-            if (dim not in val):
-                assign_coords[dim] = None
-
-        expand_dims = set(feature_dims).difference(set(val.dims))
-        expand_dims.add('variable')
-        return val.assign_coords(**assign_coords)\
-                  .expand_dims(expand_dims)\
-                  .stack(features=('variable',) + feature_dims,
-                         samples=sample_dims)
-
-    Xs = [mystack(X[key]) for key in X.data_vars]
-
-    return xr.concat(Xs, dim='features')\
-             .transpose('samples', 'features')
+    return stack_cat(X, features=feature_dims, samples=sample_dims)\
+        .transpose('samples', 'features')
 
 
 def mat_to_dataset(X, coords=None, sample_dims=None, new_dim_name='m'):
