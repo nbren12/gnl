@@ -66,6 +66,37 @@ def _stack_cat_once(ds: xr.Dataset, new_dim, dims, variable_dim='variable'):
         raise ValueError("Input must be a xr.DataArray or xr.Dataset")
 
 
+def unstack_cat(da: xr.DataArray, dim, level=0):
+    """Unstack DataArray expanding to dataset along a given level
+
+    Parameters
+    ----------
+    da
+    dim
+    level
+
+    Returns
+    -------
+    xr.Dataset
+
+    """
+    if not isinstance(da, xr.DataArray):
+        raise ValueError("da must be a DataArray object")
+
+    idx = da.indexes[dim]
+    if not isinstance(idx, pd.MultiIndex):
+        raise ValueError(f"{dim} is not a stacked coordinate")
+    variables = idx.levels[level]
+
+    # pull variables out of datarray
+    data_dict = {}
+    for k in variables:
+        data_dict[k] = da.sel(variable=k).squeeze(drop=True)
+
+    # unstacked dataset
+    return xr.Dataset(data_dict)
+
+
 def stack_cat(ds: xr.Dataset, variable_dim='variable', **kwargs):
     """Dataset aware version of xr.stack
     
@@ -77,6 +108,7 @@ def stack_cat(ds: xr.Dataset, variable_dim='variable', **kwargs):
 
     Returns
     -------
+    xr.DataArray
 
     """
     for new_dim, dims in kwargs.items():
@@ -137,26 +169,9 @@ def mat_to_dataset(X, coords=None, sample_dims=None, new_dim_name='m'):
                                   name=new_dim_name)
         coords = (new_sample_idx, coords['features'])
 
-    # stacked data array
-    xarr = xr.DataArray(X, coords)
+    # unstacked data array
+    D = xr.DataArray(X, coords).pipe(lambda x: unstack_cat(x, 'features'))
 
-    # get variable names
-    idx = xarr.coords.indexes['features']
-    try:
-        levels = idx.levels
-    except AttributeError:
-        variables = tuple(idx)
-    else:
-        variables = idx.levels[0]
-
-    # unstack variables
-    # unstacking automatically happetns in sel
-    data_dict = {}
-    for k in variables:
-        data_dict[k] = xarr.sel(variable=k).squeeze(drop=True)
-
-    # unstacked dataset
-    D = xr.Dataset(data_dict)
     try:
         return D.unstack('samples')
     except ValueError:
