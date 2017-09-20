@@ -20,6 +20,15 @@ def _unstack_rename(xarr, rename_dict):
     return xarr
 
 
+def compute_weighted_scale(weight, sample_dims, ds):
+    def f(data):
+        sig = data.std(sample_dims)
+        if set(weight.dims) <= set(sig.dims):
+            sig = (sig ** 2 * weight).sum(weight.dims).pipe(np.sqrt)
+        return sig
+    return ds.apply(f)
+
+
 def dataset_to_mat(X, sample_dims):
     sample_dims = tuple(sample_dims)
 
@@ -167,14 +176,9 @@ class Normalizer(object):
         self.weight = weight
         self.sample_dims = sample_dims
 
-    def _get_normalization(self, data):
-        sig = data.std(self.sample_dims)
-        if set(self.weight.dims) <= set(sig.dims):
-            sig = (sig ** 2 * self.weight).sum(self.weight.dims).pipe(np.sqrt)
-        return sig
 
     def fit(self, data):
-        self.scale_ = data.apply(self._get_normalization)
+        self.scale_ = compute_weighted_scale(self.weight, self.sample_dims, data)
 
     def transform(self, data):
         out = data
@@ -183,7 +187,7 @@ class Normalizer(object):
             out = out - self.mean_
 
         if self.scale:
-            self.scale_ = out.apply(self._get_normalization)
+            self.fit(data)
             out = out / self.scale_
 
         return out
