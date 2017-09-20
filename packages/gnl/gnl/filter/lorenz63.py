@@ -14,7 +14,7 @@ from numpy import dot
 
 # Generate Observations
 def observe(arr, i=Ellipsis, axis=0):
-    s = [Ellipsis,]*arr.ndim
+    s = [slice(None),]*arr.ndim
     s[axis] = i
 
     return arr[s]

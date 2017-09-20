@@ -1,0 +1,14 @@
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - numba
+  - numpy
+  - petsc4py
+  - numexpr
+  - netcdf4
+  - pyqtgraph
+  - pip
+  - pip:
+    - hug
+    - sh

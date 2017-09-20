@@ -8,7 +8,7 @@ import dask.array as da
 from dask.diagnostics import ProgressBar
 from dask import delayed
 
-from . import spline
+from gnl import spline
 
 
 class Spline(object):
