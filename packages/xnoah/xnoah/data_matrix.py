@@ -3,6 +3,7 @@ learning purposes.
 """
 from functools import partial
 from typing import Sequence
+import warnings
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -144,6 +145,7 @@ def mat_to_dataset(X, coords=None, sample_dims=None, new_dim_name='m'):
     -------
     dataset: xr.Dataset
     """
+    warnings.warn(DeprecationWarning("Use stack_cat instead"))
 
     # Generate coordinates of data matrix
     try:
@@ -188,6 +190,7 @@ class DataMatrix(object):
 
     def __init__(self, sample_dims):
         self.sample_dims = sample_dims
+        warnings.warn(DeprecationWarning("Use stack_cat/unstack_cat instead"))
 
     def dataset_to_mat(self, X):
         out =  dataset_to_mat(X, self.sample_dims)

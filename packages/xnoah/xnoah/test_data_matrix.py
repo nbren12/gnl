@@ -3,6 +3,7 @@ learning purposes.
 """
 import numpy as np
 import xarray as xr
+import pytest
 
 from .datasets import tiltwave
 from .data_matrix import (DataMatrix, Normalizer, dataset_to_mat, compute_weighted_scale,
@@ -12,6 +13,7 @@ from .data_matrix import (DataMatrix, Normalizer, dataset_to_mat, compute_weight
 def _assert_dataset_approx_eq(D, x):
     for k in D.data_vars:
         np.testing.assert_allclose(D[k], x[k].transpose(*D[k].dims))
+
 
 def test_datamatrix():
 
