@@ -53,7 +53,7 @@ def test_stack_cat():
     D = xr.Dataset({'a': a, 'b': b})
 
     feature_dims = ['z']
-    y = stack_cat(D, features=feature_dims)\
+    y = stack_cat(D, 'features', feature_dims)\
         .transpose("x", "features")
 
     assert y.dims == ('x', 'features')
@@ -74,7 +74,7 @@ def test_stack_cat():
 
     # test when variables have different dimensionality
     D = xr.Dataset({'a': a, 'b': b.isel(z=0)})
-    y = stack_cat(D, features=feature_dims)\
+    y = stack_cat(D, 'features', feature_dims)\
             .transpose('x', 'features')
     x = unstack_cat(y, 'features')
     _assert_dataset_approx_eq(D, x)

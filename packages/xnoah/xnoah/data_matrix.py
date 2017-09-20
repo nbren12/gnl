@@ -31,7 +31,7 @@ def compute_weighted_scale(weight, sample_dims, ds):
     return ds.apply(f)
 
 
-def _stack_cat_once(ds: xr.Dataset, new_dim, dims, variable_dim='variable'):
+def stack_cat(ds: xr.Dataset, new_dim, dims, variable_dim='variable'):
     """Stack dimensions and variables of a Dataset
 
     Parameters
@@ -44,6 +44,11 @@ def _stack_cat_once(ds: xr.Dataset, new_dim, dims, variable_dim='variable'):
     xr.DataArray
     """
     dims = tuple(dims)
+
+    # check argument type to avoid confusing errors later on
+    if not isinstance(ds, xr.Dataset):
+
+        raise ValueError("Input must be a xr.Dataset")
 
     def f(val):
         # ensure square output
@@ -59,13 +64,8 @@ def _stack_cat_once(ds: xr.Dataset, new_dim, dims, variable_dim='variable'):
             .expand_dims(expand_dims) \
             .stack(**{new_dim: (variable_dim,) + dims})
 
-    if isinstance(ds, xr.Dataset):
-        Xs = [f(ds[key]) for key in ds.data_vars]
-        return xr.concat(Xs, dim=new_dim)
-    elif isinstance(ds, xr.DataArray):
-        return ds.stack(**{new_dim: dims})
-    else:
-        raise ValueError("Input must be a xr.DataArray or xr.Dataset")
+    Xs = [f(ds[key]) for key in ds.data_vars]
+    return xr.concat(Xs, dim=new_dim)
 
 
 def unstack_cat(da: xr.DataArray, dim, level=0):
@@ -99,32 +99,14 @@ def unstack_cat(da: xr.DataArray, dim, level=0):
     return xr.Dataset(data_dict)
 
 
-def stack_cat(ds: xr.Dataset, variable_dim='variable', **kwargs):
-    """Dataset aware version of xr.stack
-    
-    Parameters
-    ----------
-    ds
-    kwargs
-    variable_dim
-
-    Returns
-    -------
-    xr.DataArray
-
-    """
-    for new_dim, dims in kwargs.items():
-        ds = _stack_cat_once(ds, new_dim, dims, variable_dim=variable_dim)
-    return ds
-
-
 def dataset_to_mat(X, sample_dims):
     sample_dims = tuple(sample_dims)
 
     # all the dimensions which are not sample dims are feature dims
     feature_dims = tuple(dim for dim in X.dims
                          if dim not in sample_dims)
-    return stack_cat(X, features=feature_dims, samples=sample_dims)\
+    return stack_cat(X, 'features', feature_dims)\
+        .stack(samples=sample_dims)\
         .transpose('samples', 'features')
 
 
