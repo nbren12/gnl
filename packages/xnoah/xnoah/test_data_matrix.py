@@ -5,7 +5,8 @@ import numpy as np
 import xarray as xr
 
 from .datasets import tiltwave
-from .data_matrix import DataMatrix, Normalizer, dataset_to_mat, compute_weighted_scale
+from .data_matrix import (DataMatrix, Normalizer, dataset_to_mat, compute_weighted_scale,
+                          stack_cat, unstack_cat)
 
 
 def _assert_dataset_approx_eq(D, x):
@@ -39,6 +40,41 @@ def test_datamatrix():
     y = mat.dataset_to_mat(D)
     assert y.dims == ('samples', 'features')
     x = mat.mat_to_dataset(y)
+    _assert_dataset_approx_eq(D, x)
+
+
+def test_stack_cat():
+
+    # setup data
+    a = tiltwave()
+    b = a.copy()
+    D = xr.Dataset({'a': a, 'b': b})
+
+    feature_dims = ['z']
+    y = stack_cat(D, features=feature_dims)\
+        .transpose("x", "features")
+
+    assert y.dims == ('x', 'features')
+
+    x = unstack_cat(y, "features")
+    _assert_dataset_approx_eq(D, x)
+
+    # test on just one sample
+    x0 = unstack_cat(y[0], "features")
+    d0 = D.isel(x=0)
+    _assert_dataset_approx_eq(d0, x0)
+
+    # test when data is cast as numpy array
+    y0 = y.data[0]
+    coords = (y.coords['features'],)
+    y0 = xr.DataArray(y0, coords)
+    x0 = unstack_cat(y0, 'features')
+
+    # test when variables have different dimensionality
+    D = xr.Dataset({'a': a, 'b': b.isel(z=0)})
+    y = stack_cat(D, features=feature_dims)\
+            .transpose('x', 'features')
+    x = unstack_cat(y, 'features')
     _assert_dataset_approx_eq(D, x)
 
 

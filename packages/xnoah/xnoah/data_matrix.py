@@ -42,6 +42,7 @@ def _stack_cat_once(ds: xr.Dataset, new_dim, dims, variable_dim='variable'):
     -------
     xr.DataArray
     """
+    dims = tuple(dims)
 
     def f(val):
         # ensure square output
