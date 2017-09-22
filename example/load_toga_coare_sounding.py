@@ -3,7 +3,7 @@ Read data from the TOGA COARE soundings available at
 http://tornado.atmos.colostate.edu/togadata/ifa_data.html#DATA
 """
 import os
-import xray
+import xarray as xray
 import datetime
 import numpy as np
 from numpy import linspace, arange, concatenate
@@ -43,11 +43,14 @@ def main():
 
 
     ## Get TOGA profiles
+    print("Loading data")
     if not os.path.exists('basic_flds'):
         os.system('curl http://tornado.atmos.colostate.edu/togadata/data/ifa_averaged_v2/basic_flds.ifa_v2.1.gz | gunzip > basic_flds')
 
     toga = load_sounds('basic_flds')
+    print("Saving data to toga.nc")
     toga.to_netcdf("toga.nc")
+
 
 if __name__ =='__main__':
     main()
