@@ -2,6 +2,8 @@
 learning purposes.
 """
 from functools import partial
+from typing import Sequence
+import warnings
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -29,32 +31,83 @@ def compute_weighted_scale(weight, sample_dims, ds):
     return ds.apply(f)
 
 
+def stack_cat(ds: xr.Dataset, new_dim, dims, variable_dim='variable'):
+    """Stack dimensions and variables of a Dataset
+
+    Parameters
+    ----------
+    ds: xr.Dataset
+    dims: Sequence
+
+    Returns
+    -------
+    xr.DataArray
+    """
+    dims = tuple(dims)
+
+    # check argument type to avoid confusing errors later on
+    if not isinstance(ds, xr.Dataset):
+
+        raise ValueError("Input must be a xr.Dataset")
+
+    def f(val):
+        # ensure square output
+
+        assign_coords = {variable_dim: val.name}
+        for dim in dims:
+            if (dim not in val):
+                assign_coords[dim] = None
+
+        expand_dims = set(dims).difference(set(val.dims))
+        expand_dims.add('variable')
+        return val.assign_coords(**assign_coords) \
+            .expand_dims(expand_dims) \
+            .stack(**{new_dim: (variable_dim,) + dims})
+
+    Xs = [f(ds[key]) for key in ds.data_vars]
+    return xr.concat(Xs, dim=new_dim)
+
+
+def unstack_cat(da: xr.DataArray, dim, level=0):
+    """Unstack DataArray expanding to dataset along a given level
+
+    Parameters
+    ----------
+    da
+    dim
+    level
+
+    Returns
+    -------
+    xr.Dataset
+
+    """
+    if not isinstance(da, xr.DataArray):
+        raise ValueError("da must be a DataArray object")
+
+    idx = da.indexes[dim]
+    if not isinstance(idx, pd.MultiIndex):
+        raise ValueError(f"{dim} is not a stacked coordinate")
+    variables = idx.levels[level]
+
+    # pull variables out of datarray
+    data_dict = {}
+    for k in variables:
+        data_dict[k] = da.sel(variable=k).squeeze(drop=True)
+
+    # unstacked dataset
+    return xr.Dataset(data_dict)
+
+
 def dataset_to_mat(X, sample_dims):
     sample_dims = tuple(sample_dims)
 
     # all the dimensions which are not sample dims are feature dims
     feature_dims = tuple(dim for dim in X.dims
                          if dim not in sample_dims)
-
-    def mystack(val):
-        # ensure square output
-
-        assign_coords = dict(variable=val.name)
-        for dim in feature_dims:
-            if (dim not in val):
-                assign_coords[dim] = None
-
-        expand_dims = set(feature_dims).difference(set(val.dims))
-        expand_dims.add('variable')
-        return val.assign_coords(**assign_coords)\
-                  .expand_dims(expand_dims)\
-                  .stack(features=('variable',) + feature_dims,
-                         samples=sample_dims)
-
-    Xs = [mystack(X[key]) for key in X.data_vars]
-
-    return xr.concat(Xs, dim='features')\
-             .transpose('samples', 'features')
+    return stack_cat(X, 'features', feature_dims)\
+        .stack(samples=sample_dims)\
+        .transpose('samples', 'features')
 
 
 def mat_to_dataset(X, coords=None, sample_dims=None, new_dim_name='m'):
@@ -74,6 +127,7 @@ def mat_to_dataset(X, coords=None, sample_dims=None, new_dim_name='m'):
     -------
     dataset: xr.Dataset
     """
+    warnings.warn(DeprecationWarning("Use stack_cat instead"))
 
     # Generate coordinates of data matrix
     try:
@@ -100,26 +154,9 @@ def mat_to_dataset(X, coords=None, sample_dims=None, new_dim_name='m'):
                                   name=new_dim_name)
         coords = (new_sample_idx, coords['features'])
 
-    # stacked data array
-    xarr = xr.DataArray(X, coords)
+    # unstacked data array
+    D = xr.DataArray(X, coords).pipe(lambda x: unstack_cat(x, 'features'))
 
-    # get variable names
-    idx = xarr.coords.indexes['features']
-    try:
-        levels = idx.levels
-    except AttributeError:
-        variables = tuple(idx)
-    else:
-        variables = idx.levels[0]
-
-    # unstack variables
-    # unstacking automatically happetns in sel
-    data_dict = {}
-    for k in variables:
-        data_dict[k] = xarr.sel(variable=k).squeeze(drop=True)
-
-    # unstacked dataset
-    D = xr.Dataset(data_dict)
     try:
         return D.unstack('samples')
     except ValueError:
@@ -135,6 +172,7 @@ class DataMatrix(object):
 
     def __init__(self, sample_dims):
         self.sample_dims = sample_dims
+        warnings.warn(DeprecationWarning("Use stack_cat/unstack_cat instead"))
 
     def dataset_to_mat(self, X):
         out =  dataset_to_mat(X, self.sample_dims)
