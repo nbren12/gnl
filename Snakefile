@@ -35,8 +35,12 @@ rule coarsen:
 rule all_coarse_vars:
     input: expand("coarse/{field}.nc", field='U V TABS QRAD QV QN QP'.split(' '))
 
+rule all_pingping_processed:
+    input: 'nc3hrlydata/q1.nc',  'nc3hrlydata/q2.nc',
+           'nc3hrlydata/qt.nc', 'nc3hrlydata/sl.nc',
+           "dataintp160km3hr_inst_trop/QRAD_nopert.nc",
+           "dataintp160km3hr_inst_trop/QRAD_nopert_ext.nc",
+           statfile
 
-rule coarse_grid:
-    input: statfile
-    output: "grid.nc"
-    script: "scripts/create_grid.py"
+    output: expand("ave160km/{field}.nc", field='q1 q2 qt sl qrad'.split(' '))
+    script: "scripts/cleanup.py"
