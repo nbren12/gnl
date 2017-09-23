@@ -2,6 +2,9 @@ import xarray as xr
 import os
 import glob
 
+statfile = "OUT_STAT/NG_5120x2560x34_4km_10s_QOBS_EQX.nc"
+
+
 def get_3d_files(wildcards):
     files = glob.glob(f"OUT_3D/*EQX*{wildcards.field}.nc")
 
@@ -11,7 +14,7 @@ def get_3d_files(wildcards):
 rule tmpcoarsen:
     input: "{f}.nc"
     output: "tmp/coarse/{f}.nc"
-    script: "coarsen.py"
+    script: "scripts/coarsen.py"
 
 
 rule makerecdim:
@@ -28,6 +31,12 @@ rule coarsen:
         xr.open_mfdataset(input, concat_dim='time').to_netcdf(output[0])
 
 
-
+# This is a very large job. 
 rule all_coarse_vars:
     input: expand("coarse/{field}.nc", field='U V TABS QRAD QV QN QP'.split(' '))
+
+
+rule coarse_grid:
+    input: statfile
+    output: "grid.nc"
+    script: "scripts/create_grid.py"

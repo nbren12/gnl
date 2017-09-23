@@ -5,12 +5,10 @@ dy = 160e3
 dx = 160e3
 dt = 3/24
 
-statfile = "OUT_STAT/NG_5120x2560x34_4km_10s_QOBS_EQX.nc"
-
 nx,ny,nt = 128,16,320
 
 # get z from statfile
-z = xr.open_dataset(statfile).z
+z = xr.open_dataset(snakemake.input[0]).z
 
 
 grid = xr.Dataset({
@@ -20,6 +18,12 @@ grid = xr.Dataset({
     'z': z,
 }).set_coords(["x", "y", "time", "z"])
 
-from IPython import embed; embed()
+
+grid.x.attrs['units'] = 'm'
+grid.y.attrs['units'] = 'm'
+grid.time.attrs['units'] = 'd'
+
+grid.to_netcdf(snakemake.output[0])
+
 
 
