@@ -47,7 +47,8 @@ def apply_grid(ds, grid):
 
     # set values
     for k in grid:
-        ds[k] = grid[k]
+        if k in ds:
+            ds[k] = grid[k]
 
 
     return ds

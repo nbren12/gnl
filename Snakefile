@@ -9,8 +9,11 @@ data_paths = {
     'q2': 'nc3hrlydata/q2.nc',
     'qt': 'nc3hrlydata/qt.nc',
     'sl': 'nc3hrlydata/sl.nc',
-    'qrad': ["dataintp160km3hr_inst_trop/QRAD_nopert.nc", "dataintp160km3hr_inst_trop/QRAD_nopert_ext.nc"]
 }
+
+for key in 'QRAD LHF Prec Q1 Q2 QN QP QT QV SHF SL TABS U V W'.split(' '):
+    data_paths[key] = [f"dataintp160km3hr_inst_trop/{key}_nopert.nc",
+                       f"dataintp160km3hr_inst_trop/{key}_nopert_ext.nc"]
 
 
 def get_3d_files(wildcards):
@@ -46,6 +49,6 @@ rule all_coarse_vars:
 rule all_pingping_processed:
     input: stat=statfile, **data_paths
 
-    output: expand("ave160km/{field}.nc", field='q1 q2 qt sl qrad'.split(' '))
+    output: expand("ave160km/{field}.nc", field=data_paths.keys())
     params: data_paths=data_paths
     script: "scripts/cleanup.py"
