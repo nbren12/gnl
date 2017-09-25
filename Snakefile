@@ -4,16 +4,23 @@ import glob
 
 statfile = "OUT_STAT/NG_5120x2560x34_4km_10s_QOBS_EQX.nc"
 
-data_paths = {
-    'q1': 'nc3hrlydata/q1.nc',
-    'q2': 'nc3hrlydata/q2.nc',
-    'qt': 'nc3hrlydata/qt.nc',
-    'sl': 'nc3hrlydata/sl.nc',
-}
+# data_paths = {
+#     'q1': 'nc3hrlydata/q1.nc',
+#     'q2': 'nc3hrlydata/q2.nc',
+#     'qt': 'nc3hrlydata/qt.nc',
+#     'sl': 'nc3hrlydata/sl.nc',
+# }
+
+data_paths = {}
 
 for key in 'QRAD LHF Prec Q1 Q2 QN QP QT QV SHF SL TABS U V W'.split(' '):
-    data_paths[key] = [f"dataintp160km3hr_inst_trop/{key}_nopert.nc",
-                       f"dataintp160km3hr_inst_trop/{key}_nopert_ext.nc"]
+    if key in 'Prec SHF LHF'.split(' '):
+        path_key = f'2d/{key}'
+    else:
+        path_key = f'3d/{key}'
+
+    data_paths[path_key] = [f"dataintp160km3hr_inst_trop/{key}_nopert.nc",
+                            f"dataintp160km3hr_inst_trop/{key}_nopert_ext.nc"]
 
 
 def get_3d_files(wildcards):
