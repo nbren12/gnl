@@ -55,15 +55,9 @@ def apply_grid(ds, grid):
 
 def main():
 
-    grid = create_grid("OUT_STAT/NG_5120x2560x34_4km_10s_QOBS_EQX.nc")
+    grid = create_grid(snakemake.input.stat)
 
-    data_paths = {
-        'q1': 'nc3hrlydata/q1.nc',
-        'q2': 'nc3hrlydata/q2.nc',
-        'qt': 'nc3hrlydata/qt.nc',
-        'sl': 'nc3hrlydata/sl.nc',
-        'qrad': ["dataintp160km3hr_inst_trop/QRAD_nopert.nc", "dataintp160km3hr_inst_trop/QRAD_nopert_ext.nc"]
-    }
+    data_paths = snakemake.input
 
 
 
@@ -71,10 +65,11 @@ def main():
         os.mkdir("ave160km")
 
     for key, val in data_paths.items():
-        print(f"Fixing {key}")
-        ds = xr.open_mfdataset(val, concat_dim='t')
-        apply_grid(ds, grid).\
-            to_netcdf(f"ave160km/{key}.nc")
+        if key !='stat':
+            print(f"Fixing {key}")
+            ds = xr.open_mfdataset(val, concat_dim='t')
+            apply_grid(ds, grid).\
+                to_netcdf(f"ave160km/{key}.nc")
 
 if __name__ == '__main__':
     main()

@@ -4,6 +4,14 @@ import glob
 
 statfile = "OUT_STAT/NG_5120x2560x34_4km_10s_QOBS_EQX.nc"
 
+data_paths = {
+    'q1': 'nc3hrlydata/q1.nc',
+    'q2': 'nc3hrlydata/q2.nc',
+    'qt': 'nc3hrlydata/qt.nc',
+    'sl': 'nc3hrlydata/sl.nc',
+    'qrad': ["dataintp160km3hr_inst_trop/QRAD_nopert.nc", "dataintp160km3hr_inst_trop/QRAD_nopert_ext.nc"]
+}
+
 
 def get_3d_files(wildcards):
     files = glob.glob(f"OUT_3D/*EQX*{wildcards.field}.nc")
@@ -36,11 +44,8 @@ rule all_coarse_vars:
     input: expand("coarse/{field}.nc", field='U V TABS QRAD QV QN QP'.split(' '))
 
 rule all_pingping_processed:
-    input: 'nc3hrlydata/q1.nc',  'nc3hrlydata/q2.nc',
-           'nc3hrlydata/qt.nc', 'nc3hrlydata/sl.nc',
-           "dataintp160km3hr_inst_trop/QRAD_nopert.nc",
-           "dataintp160km3hr_inst_trop/QRAD_nopert_ext.nc",
-           statfile
+    input: stat=statfile, **data_paths
 
     output: expand("ave160km/{field}.nc", field='q1 q2 qt sl qrad'.split(' '))
+    params: data_paths=data_paths
     script: "scripts/cleanup.py"
