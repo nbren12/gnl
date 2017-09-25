@@ -47,9 +47,8 @@ def apply_grid(ds, grid):
 
     # set values
     for k in grid:
-        if k in ds:
+        if k in ds.dims:
             ds[k] = grid[k]
-
 
     return ds
 
@@ -69,8 +68,8 @@ def main():
         if key !='stat':
             print(f"Fixing {key}")
             ds = xr.open_mfdataset(val, concat_dim='t')
-            apply_grid(ds, grid).\
-                to_netcdf(f"ave160km/{key}.nc")
+            ds = apply_grid(ds, grid)
+            ds.to_netcdf(f"ave160km/{key}.nc")
 
 if __name__ == '__main__':
     main()

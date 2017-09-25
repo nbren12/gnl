@@ -2,6 +2,9 @@ import xarray as xr
 import os
 import glob
 
+
+destination = "/home/disk/eos4/nbren12/Data/id/63929c31188b4c0eff9f9c36f8f648397cadcfa6"
+
 statfile = "OUT_STAT/NG_5120x2560x34_4km_10s_QOBS_EQX.nc"
 
 # data_paths = {
@@ -53,9 +56,18 @@ rule coarsen:
 rule all_coarse_vars:
     input: expand("coarse/{field}.nc", field='U V TABS QRAD QV QN QP'.split(' '))
 
+
+p2_vars = expand("ave160km/{field}.nc", field=data_paths.keys())
+
 rule all_pingping_processed:
     input: stat=statfile, **data_paths
 
-    output: expand("ave160km/{field}.nc", field=data_paths.keys())
+    output: p2_vars
     params: data_paths=data_paths
     script: "scripts/cleanup.py"
+
+rule move:
+    input: p2_vars
+    output: destination
+    shell: "mv ave160km {output}"
+
