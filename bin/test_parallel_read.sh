@@ -1,6 +1,7 @@
 #!/bin/bash
 # test for parallel read performance using dd and gnu parallel
 # I have hardcoded OUT_3D which is a directory with many large netcdf files
+# tags: netcdf io profile performance
 
 
 NCDIR=$1
