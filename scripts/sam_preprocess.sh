@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Preprocess model output from the system for atmospheric modeling (SAM) into
 # netcdf files.  this file calls com2nc and the other functions in the SAM/UTIL
 # folder and generates a nice directory structure for the output in a
@@ -7,6 +7,7 @@
 function splitvar() {
     output=$3/$1.nc
     if [ ! -f $output ]; then 
+        echo "Running in " `pwd`
         ncrcat -v $1 -o $output  $2/*.nc
     fi
 }
@@ -26,8 +27,29 @@ function process3d() {
         popd
     fi
     echo "Splitting all output variables"
-    parallel splitvar ::: $vars3d ::: OUT_3D ::: data/3d/
+    parallel -j 8 splitvar ::: $vars3d ::: OUT_3D ::: data/3d/
 }
+
+
+function processmoments() {
+
+    vars2d="TH1 THV1 THL1 THLW QW1 QW2 W1 W2 WQW W3 U1 U2 UW V1 V2 VW QL CDFRC WQL W4 QR1 AUTO1 ACRE1 RFLUX EVAPa EVAPb"
+
+    if [ -e OUT_MOMENTS/*_1.nc ]; then 
+        echo "2D output already exists"
+    else
+        echo "running com2D2nc"
+        pushd OUT_MOMENTS/
+        bin2D2nc *.bin2D > /dev/null
+        popd
+    fi
+
+    echo "Splitting all output variables"
+    mkdir -p data/moms
+    parallel -j 8 splitvar ::: $vars2d ::: OUT_MOMENTS ::: data/moms/
+}
+
+export -f processmoments
 
 function process2d() {
 
@@ -43,7 +65,7 @@ function process2d() {
 
     echo "Splitting all output variables"
     mkdir -p data/2d/
-    parallel splitvar ::: $vars2d ::: OUT_2D ::: data/2d/
+    parallel -j 8 splitvar ::: $vars2d ::: OUT_2D ::: data/2d/
 }
 
 function processStat() {
@@ -60,9 +82,8 @@ function processStat() {
 if [ -d $1 ] ; then
     cd $1
 fi
+    processmoments
     process3d
     process2d
     processStat
-
-
 
