@@ -16,7 +16,7 @@ case $yn in
 esac
 
 mkdir $hash
-mv $file $hash
+mv $* $hash
 
 [ ! -d $dataroot ] && mkdir -p  $dataroot
 mv $hash $dataroot
