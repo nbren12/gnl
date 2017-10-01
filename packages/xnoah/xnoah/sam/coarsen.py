@@ -5,19 +5,15 @@ from xarray.core.computation import apply_ufunc
 
 from functools import wraps
 
-class with_dims(object):
-    def __init__(self, dims):
-        self.dims = dims
 
-    def __call__(self, func):
-
-        @wraps(func)
-        def f(arr, **kwargs):
-            if set(arr.dims) >= set(self.dims):
-                return func(arr, **kwargs)
-            else:
-                return arr
-        return f
+def dfun(func):
+    @wraps(func)
+    def f(x, *args, **kwargs):
+        if isinstance(x, xr.DataArray):
+            return func(x, *args, **kwargs)
+        elif isinstance(x, xr.Dataset):
+            return x.apply(lambda x: func(x, *args, **kwargs))
+    return f
 
 
 def coarsen_destagger_dask(x, blocks, stagger=None, mode='wrap'):
@@ -72,8 +68,9 @@ def coarsen_destagger_dask(x, blocks, stagger=None, mode='wrap'):
         return ans
 
 
+@dfun
 def coarsen(A, blocks, stagger_dim=None, mode='wrap'):
-    """Coarsen DataArray using reduction
+    """coarsen and potentially destagger a 
     """
     blocks = {k:blocks[k] for k in blocks
               if k in A.dims}
@@ -110,7 +107,7 @@ def destagger_dask(darr, mode='wrap'):
     r = (np.take(darr, ind, axis=-1, mode=mode) +darr)/2
     return r
 
-
+@dfun
 def destagger(xarr, dim, **kwargs):
     """Destagger an inteface located variable along a dimension
 
@@ -150,11 +147,7 @@ def destagger(xarr, dim, **kwargs):
 
 def main(input, output, blocks, **kwargs):
     ds = xr.open_dataset(input)
-
-    def fun(ds):
-        coarsen(ds, blocks, **kwargs)
-
-    ds.apply(fun).to_netcdf(output)
+    coarsen(ds, blocks, **kwargs).to_netcdf(output)
 
 
 def test_coarsen():
