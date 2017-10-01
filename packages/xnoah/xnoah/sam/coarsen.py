@@ -69,7 +69,7 @@ def coarsen_destagger_dask(x, blocks, stagger=None, mode='wrap'):
 
 
 @dfun
-def coarsen(A, blocks, stagger_dim=None, mode='wrap'):
+def coarsen(A, blocks=None, stagger_dim=None, mode='wrap'):
     """coarsen and potentially destagger a 
     """
     blocks = {k:blocks[k] for k in blocks
@@ -145,9 +145,18 @@ def destagger(xarr, dim, **kwargs):
                        kwargs=kwargs)
 
 
-def main(input, output, blocks, **kwargs):
+def main(input, output, **kwargs):
     ds = xr.open_dataset(input)
-    coarsen(ds, blocks, **kwargs).to_netcdf(output)
+    coarsen(ds, **kwargs).to_netcdf(output)
+
+
+def snakemake(input, output, params):
+    ds = xr.open_dataset(input[0])
+    params = dict(params)
+    print(f"Coarse-graining {input[0]} with params:", params)
+    stagger_dim, mode = params.pop('stagger_dim')
+    coarsen(ds, stagger_dim=stagger_dim,
+            mode=mode, **params).to_netcdf(output[0])
 
 
 def test_coarsen():
@@ -158,14 +167,7 @@ def test_coarsen():
     main(path, "coarse.nc", {'x': 40, 'y': 40}, stagger_dim=None, mode='wrap')
 
 
-try:
-    snakemake
-except NameError:
-    # import sys
-    # main(sys.argv[1], sys.argv[2])
-    if __name__ == '__main__':
-        test_coarsen()
-else:
-    main(snakemake.input[0], snakemake.output[0],
-         ncoarse=snakemake.params.coarsening,
-         stagger=snakemake.params.stagger)
+# import sys
+# main(sys.argv[1], sys.argv[2])
+if __name__ == '__main__':
+    test_coarsen()
