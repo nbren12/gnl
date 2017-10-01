@@ -10,6 +10,13 @@ def f(x, ncoarse=40):
         return x
 
 
+def destagger(x, dim):
+    """Destagger input data array along dimension"""
+    pass
+    # TODO implement
+    # assert that data not be chunked along x
+    # or write a shift function that has different boundary conditions
+
 def main(input, output, ncoarse=40):
     ds = xr.open_dataset(input)
 

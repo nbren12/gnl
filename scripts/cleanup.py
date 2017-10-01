@@ -1,3 +1,4 @@
+import shutil
 import os
 import xarray as xr
 import numpy as np
@@ -70,6 +71,7 @@ def main():
             ds = xr.open_mfdataset(val, concat_dim='t')
             ds = apply_grid(ds, grid)
             ds.to_netcdf(f"ave160km/{key}.nc")
+    shutil.copy(snakemake.input.stat, "ave160km/stat.nc")
 
 if __name__ == '__main__':
     main()
