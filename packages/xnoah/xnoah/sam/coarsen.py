@@ -1,73 +1,77 @@
+import dask.array as da
 import numpy as np
 import xarray as xr
+from skimage.measure import block_reduce
 from xarray.core.computation import apply_ufunc
-import dask.array as da
 
-def dataset2dfun(coarsen):
-    def f(arr, **kwargs):
-        if isinstance(arr, xr.DataArray):
-            return coarsen(arr, **kwargs)
-        elif isinstance(arr, xr.Dataset):
-            def g(x):
-                if set(x.dims) >= set(['x', 'y']):
-                    return coarsen(x, **kwargs)
-                else:
-                    return x
-            return arr.apply(g)
+from functools import wraps
 
-    return f
+class with_dims(object):
+    def __init__(self, dims):
+        self.dims = dims
+
+    def __call__(self, func):
+
+        @wraps(func)
+        def f(arr, **kwargs):
+            if set(arr.dims) >= set(self.dims):
+                return func(arr, **kwargs)
+            else:
+                return arr
+        return f
 
 
-@dataset2dfun
-def coarsen_xy(A, fun=np.mean, **kwargs):
-    """Coarsen DataArray using reduction
-
-    Parameters
-    ----------
-    A: DataArray
-    axis: str
-        name of axis
-    q: int
-        coarsening factor
-    fun:
-        reduction operator
-
-    Returns
-    -------
-    y: DataArray
+def coarsen_destagger_np(x, blocks, stagger=None, mode='wrap'):
+    """
 
 
     Examples
     --------
+    >>> x = np.arange(6)
+    >>> xc = coarsen_destagger_np(x, (2,), stagger=0)
+    >>> xc
+    array([ 1. ,  3. ,  3.5])
+    """
+    blocks = tuple(blocks)
+    xcoarse = block_reduce(x, blocks, np.sum)
+    # TODO refactor this code to another function
+    if stagger is not None:
+        blk = tuple([blocks[k] if k != stagger else 1
+                     for k, _ in enumerate(blocks)])
 
-    Load data and coarsen along the x dimension
-    >>> name = "/scratch/noah/Data/SAM6.10.9/OUT_2D/HOMO_2km_16384x1_64_2000m_5s.HOMO_2K.smagor_16.2Dcom_*.nc"
+        left_inds = np.arange(0, x.shape[stagger], blocks[stagger])
+        right_inds = np.arange(blocks[stagger], x.shape[stagger]+1, blocks[stagger])
 
-    >>> ds = xr.open_mfdataset(name, chunks={'time': 100})
-    >>> # tb = ds.apply(lambda x: x.meanevery('x', 32))
-    >>> def f(x):
-    ...     return x.coarsen(x=16)
-    >>> dsc = ds.apply(f)
-    >>> print("saving to netcdf")
-    >>> dsc.to_netcdf("2dcoarsened.nc")
+        left = block_reduce(np.take(x, left_inds, stagger), blk, np.sum)
+        right = block_reduce(np.take(x, right_inds, stagger, mode=mode),
+                             blk, np.sum)
+
+        xcoarse = xcoarse + (right - left)/2
+
+    return xcoarse/np.prod(blocks)
+
+
+def coarsen(A, blocks, stagger_dim=None, mode='wrap'):
+    """Coarsen DataArray using reduction
     """
 
-    print(f"Coarsening data to {kwargs}")
-    # this function needs a dask array to work
-    if A.chunks is None:
-        A = A.chunk()
+    np_blocks = [blocks.get(A.dims[i], 1)
+                 for i in range(A.ndim)]
 
-    coarse_dict = {A.get_axis_num(k): v for k,v in kwargs.items()}
-    vals = da.coarsen(fun, A.data, coarse_dict)
+    kwargs = {'mode': mode}
+    if stagger_dim is not None:
+        kwargs['stagger'] = A.get_axis_num(stagger_dim)
+
+    vals = coarsen_destagger_np(A.data, np_blocks, **kwargs)
 
     # coarsen dimension
     coords = {}
     for k in A.coords:
-        if k in kwargs:
+        if k in blocks:
             c  = A[k].data
             dim = da.from_array(c, chunks=(len(c), ))
 
-            q = kwargs[k]
+            q = blocks[k]
             dim = da.coarsen(np.mean, dim, {0: q}).compute()
             coords[k] = dim
         else:
@@ -77,13 +81,12 @@ def coarsen_xy(A, fun=np.mean, **kwargs):
                         name=A.name)
 
 
-def destagger_dask(darr, mode=None):
-    ind = np.arange(darr.shape[-1])
+def destagger_dask(darr, mode='wrap'):
+    ind = np.arange(darr.shape[-1]) + 1
     r = (np.take(darr, ind, axis=-1, mode=mode) +darr)/2
     return r
 
 
-@dataset2dfun
 def destagger(xarr, dim, **kwargs):
     """Destagger an inteface located variable along a dimension
 
@@ -105,9 +108,15 @@ def destagger(xarr, dim, **kwargs):
     --------
     numpy.take
 
+    Examples
+    --------
+    >>> x = xr.DataArray(np.arange(0, 5), [('x', np.arange(0, 5))])
+    >>> destagger(x, 'x')
+    <xarray.DataArray (x: 5)>
+    array([ 0.5,  1.5,  2.5,  3.5,  2. ])
+    Coordinates:
+      * x        (x) int64 0 1 2 3 4
     """
-    print(f"Destaggering {xarr.name} along dim {dim}")
-
     return apply_ufunc(destagger_dask, xarr,
                        input_core_dims=[[dim]],
                        output_core_dims=[[dim]],
@@ -115,15 +124,11 @@ def destagger(xarr, dim, **kwargs):
                        kwargs=kwargs)
 
 
-def main(input, output, ncoarse=40, stagger=None, mode=None):
-    ds = xr.open_dataset(input)
-    if stagger is not None:
-        print("Destaggering variable")
-        ds = destagger(ds, dim=stagger, mode=mode)
 
-    coarsen_xy(ds, x=ncoarse, y=ncoarse)\
-        .transpose("time", "z", "y", "x")\
-        .to_netcdf(output)
+def main(input, output, blocks, **kwargs):
+    ds = xr.open_dataset(input)
+    fun = with_dims(blocks.keys())(lambda ds: coarsen(ds, blocks, **kwargs))
+    ds.apply(fun).to_netcdf(output)
 
 
 def test_coarsen():
@@ -131,15 +136,15 @@ def test_coarsen():
     file = "NG_5120x2560x34_4km_10s_QOBS_EQX_1280_0000173880_TABS.nc"
     folder = "~/.datasets/id/1381d73c091f2ea34ef8ea303c94e998/"
     path = os.path.join(folder, file)
-    main(path, "coarse.nc", stagger='x', mode=None)
-
+    main(path, "coarse.nc", {'x': 40, 'y': 40}, stagger_dim=None, mode='wrap')
 
 try:
     snakemake
 except NameError:
     # import sys
     # main(sys.argv[1], sys.argv[2])
-    test_coarsen()
+    if __name__ == '__main__':
+        test_coarsen()
 else:
     main(snakemake.input[0], snakemake.output[0],
          ncoarse=snakemake.params.coarsening,
