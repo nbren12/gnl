@@ -72,6 +72,9 @@ def coarsen_destagger_dask(x, blocks, stagger=None, mode='wrap'):
 def coarsen(A, blocks=None, stagger_dim=None, mode='wrap'):
     """coarsen and potentially destagger a 
     """
+    if stagger_dim not in blocks:
+        raise ValueError(f"stagger_dim \"{stagger_dim}\" is not in blocks")
+
     blocks = {k:blocks[k] for k in blocks
               if k in A.dims}
 
