@@ -4,21 +4,28 @@ Concatenate many many netcdf files
 The combined dataset should fit in memory
 """
 import xarray as xr
+import rx
 
 
 batchsize = snakemake.params.get('batchsize', 100)
 files = list(snakemake.input)
 datasets = []
-counter = 1
-while True:
-    print(f"Processing batch {counter}")
-    counter += 1
 
-    batchsize = min(batchsize, len(files))
-    if batchsize == 0:
-        break
-    da = xr.open_mfdataset(files[:batchsize], concat_dim='time').compute()
-    del files[:batchsize]
-    datasets.append(da)
 
-xr.auto_combine(datasets, concat_dim='time').to_netcdf(snakemake.output[0])
+def open_files(xs):
+    d =  xr.open_mfdataset(xs, concat_dim='time').compute()
+    print("Opened data from", float(d.time.min()),
+          "to", float(d.time.max()))
+    return d
+     
+def concat(xs):
+    print("concatenating")
+    len(xs)
+    xr.auto_combine(xs, concat_dim='time').to_netcdf(snakemake.output[0])
+
+
+rx.Observable.from_(files)\
+        .buffer_with_count(batchsize)\
+        .map(open_files)\
+        .to_list()\
+        .subscribe(concat)

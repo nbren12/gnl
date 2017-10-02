@@ -7,15 +7,6 @@ import xnoah.sam.coarsen
 dataroot = "/home/disk/eos17/guest/SAM6.10.6_NG"
 workdir: "/home/disk/eos4/nbren12/eos8/Data/id/726a6fd3430d51d5a2af277fb1ace0c464b1dc48"
 
-
-# data_paths = {
-#     'q1': 'nc3hrlydata/q1.nc',
-#     'q2': 'nc3hrlydata/q2.nc',
-#     'qt': 'nc3hrlydata/qt.nc',
-#     'sl': 'nc3hrlydata/sl.nc',
-# }
-
-
 data_paths = {}
 
 for key in 'QRAD LHF Prec Q1 Q2 QN QP QT QV SHF SL TABS U V W'.split(' '):
@@ -29,7 +20,7 @@ for key in 'QRAD LHF Prec Q1 Q2 QN QP QT QV SHF SL TABS U V W'.split(' '):
 
 # This is a very large job.
 rule all_coarse_vars:
-    input: expand("coarse/3d/{field}.nc", field='U V TABS QRAD QV QN QP'.split(' '))
+    input: expand("coarse/3d/{field}.nc", field='U V W TABS QRAD QV QN QP'.split(' '))
 
 
 def get_stagger_dim_mode(input):
@@ -66,16 +57,6 @@ rule all_record_vars:
     input: get_3d_files
     output: "coarse/3d/{field}.nc"
     script: "scripts/concat_many_files.py"
-
-rule coarse_files_list:
-    input: get_3d_files
-    output: "{field}.json"
-    run: 
-        json.dump(input, open(output[0], "w"))
-        
-
-        
-
 
 
 destination = "/home/disk/eos4/nbren12/Data/id/63929c31188b4c0eff9f9c36f8f648397cadcfa6"
