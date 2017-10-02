@@ -47,7 +47,7 @@ rule make_record_dim:
 
 
 def get_3d_files(wildcards):
-    pattern = f"{dataroot}/OUT_3D/*EQX*{wildcards.field}.nc"
+    pattern = f"{dataroot}/OUT_3D/*EQX_1280*{wildcards.field}.nc"
     files = glob.glob(pattern)
     if len(files) == 0:
         raise ValueError("No files detected")
