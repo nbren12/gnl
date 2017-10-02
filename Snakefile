@@ -1,5 +1,6 @@
 import xarray as xr
 import os
+import json
 import glob
 import xnoah.sam.coarsen
 
@@ -50,7 +51,7 @@ rule coarsen_one_file:
 
 rule make_record_dim:
     input: "{f}.nc"
-    output: temp("tmp/rec/{f}.nc")
+    output: "tmp/rec/{f}.nc"
     shell: "ncks --mk_rec_dmn time {input} {output}"
 
 
@@ -64,9 +65,16 @@ def get_3d_files(wildcards):
 rule all_record_vars:
     input: get_3d_files
     output: "coarse/3d/{field}.nc"
-    # shell: "ncrcat -o {output} {input}"
-    run:
-        xr.open_mfdataset(input, concat_dim='time').to_netcdf(output[0])
+    script: "scripts/concat_many_files.py"
+
+rule coarse_files_list:
+    input: get_3d_files
+    output: "{field}.json"
+    run: 
+        json.dump(input, open(output[0], "w"))
+        
+
+        
 
 
 
