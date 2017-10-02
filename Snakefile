@@ -26,7 +26,7 @@ rule all_coarse_vars:
 def get_stagger_dim_mode(input):
     d = xr.open_dataset(input[0], cache=False)
     name = [d for d in d.data_vars if d != 'p'][0]
-    dim = {'U':'x', 'V':'y', 'W':'z'}.get(name, None)
+    dim = {'U':'x', 'V':'y'}.get(name, None)
     mode = {'x': 'wrap'}.get(dim, 'clip')
     return dim, mode
 
