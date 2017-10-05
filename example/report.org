@@ -1,0 +1,28 @@
+#+TITLE: Vertically coarse models with microphysics
+#+LATEX_HEADER: \usepackage[margin=1in]{geometry}
+#+LATEX_HEADER: \usepackage{natbib}
+
+
+* TODO Introduction
+
+  [[citet:tung_convective_2002]] is one citation [[citep:biello_transformations_2006]].
+
+  Section [[Introduction]].
+
+  \begin{equation}
+  x = y \label{eq:1}
+  \end{equation}
+
+
+  eqref:eq:1 is the most important equation in the paper.
+
+* A second section
+
+
+  citet:majda_stochastic_2008 is a nice paper. That i would look to see published
+  no matter what happens.
+
+
+
+  [[bibliographystyle:apalike]]
+  [[bibliography:/home/noah/Dropbox/Papers/zotero.bib]]
