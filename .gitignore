@@ -342,9 +342,6 @@ example/toga_rg.nc
 ipynb/Kelvin-hemholtz instability spectral
 ipynb/logs/
 maxima/
-packages/gnl/gnl/pdes/barotropic/swe.c
-packages/gnl/gnl/pdes/petsc/kernel.c
-packages/gnl/gnl/pdes/tadmor/tadmor.c
 packages/xnoah/coarse.nc
 packages/xnoah/xnoah/sam/coarse.nc
 test.nc
