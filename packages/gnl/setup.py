@@ -37,12 +37,12 @@ ext_modules = [
 
 setup(
     name = 'gnl',
-    cmdclass = {'build_ext': build_ext},
+    # cmdclass = {'build_ext': build_ext},
     # include_dirs = [np.get_include()],         # <---- New line
-    ext_modules = ext_modules,
+    # ext_modules = ext_modules,
     packages    = ['gnl', 'gnl.filter'],
     # package_dir = {'': ''},
-    package_data = {'gnl':['*.pxd',]}
+    # package_data = {'gnl':['*.pxd',]}
 
 )
 # -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm
