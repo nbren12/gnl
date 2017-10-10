@@ -38,7 +38,7 @@ class Weighter(TransformerMixin):
         return self
 
     def transform(self, X):
-        return X * self.w
+        return X * self.weight
 
 
 class Normalizer(BaseEstimator, TransformerMixin):
