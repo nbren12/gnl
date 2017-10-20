@@ -1,0 +1,50 @@
+import xarray as xr
+import os
+import json
+import glob
+import xnoah.sam.coarsen
+
+dataroot = "/home/disk/eos17/guest/SAM6.10.6_NG"
+workdir: "/home/disk/eos4/nbren12/eos8/Data/id/726a6fd3430d51d5a2af277fb1ace0c464b1dc48"
+
+# This is a very large job.
+rule all_coarse_vars:
+    input: expand("coarse/3d/{field}.nc", field='U V W TABS QRAD QV QN QP'.split(' '))
+
+
+def get_stagger_dim_mode(input):
+    d = xr.open_dataset(input[0], cache=False)
+    name = [d for d in d.data_vars if d != 'p'][0]
+    dim = {'U':'x', 'V':'y'}.get(name, None)
+    mode = {'x': 'wrap'}.get(dim, 'clip')
+    return dim, mode
+
+
+rule coarsen_one_file:
+    input: "{f}.nc"
+    output: temp("tmp/coarse{f}.nc")
+    params: blocks={'x': 40, 'y':40}
+    run:
+        params = dict(params)
+        params['stagger_dim']=get_stagger_dim_mode(input)
+        xnoah.sam.coarsen.snakemake(input, output, params)
+
+
+rule make_record_dim:
+    input: "{f}.nc"
+    output: "tmp/rec/{f}.nc"
+    shell: "ncks --mk_rec_dmn time {input} {output}"
+
+
+def get_3d_files(wildcards):
+    pattern = f"{dataroot}/OUT_3D/*EQX_1280*{wildcards.field}.nc"
+    files = glob.glob(pattern)
+    if len(files) == 0:
+        raise ValueError("No files detected")
+    return [os.path.normpath(f"tmp/rec/tmp/coarse/{x}") for x in files]
+
+
+rule all_record_vars:
+    input: get_3d_files
+    output: "coarse/3d/{field}.nc"
+    script: "scripts/concat_many_files.py"

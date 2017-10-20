@@ -1,0 +1,10 @@
+Clean up NGAqua dataset
+
+I am assuming that
+
+1. the interp folder and the nc3hourly data all have the same coordinates, and
+don't refer to different spatial locations
+
+
+Path to full ng aqua is 
+/home/disk/p/pnaren/eos8/ML/dataintp160km3hr_inst_ng/
