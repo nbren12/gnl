@@ -1,10 +1,14 @@
-Clean up NGAqua dataset
+Coarse grain data from the NGAqua simulation
 
-I am assuming that
+# Instructions
 
-1. the interp folder and the nc3hourly data all have the same coordinates, and
-don't refer to different spatial locations
-
-
-Path to full ng aqua is 
-/home/disk/p/pnaren/eos8/ML/dataintp160km3hr_inst_ng/
+0. initialize environment
+    
+    conda env create environment.yml
+    source activate sam
+    
+1. edit Snakefile.
+1a. dataroot should point to the root directory of the NGAqua run
+2a. workdir should point to the output directory
+2. run snakemake
+    snakemake
