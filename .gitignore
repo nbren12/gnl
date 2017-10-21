@@ -350,3 +350,4 @@ packages/xnoah/xnoah/sam/coarse.nc
 test.nc
 testB.nc
 .tramp_history
+*.swp
