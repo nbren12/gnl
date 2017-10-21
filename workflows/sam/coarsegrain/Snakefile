@@ -4,12 +4,21 @@ import json
 import glob
 import xnoah.sam.coarsen
 
+runid = "EQX_1280"
+# stat and 2d files have a different root
+statpath = "/home/disk/eos13/guest/SAM6.10.6_NG/OUT_STAT/NG_5120x2560x34_4km_10s_QOBS_EQX.nc"
+# 3d data has a different root
 dataroot = "/home/disk/eos17/guest/SAM6.10.6_NG"
 workdir: "/home/disk/eos4/nbren12/eos8/Data/id/726a6fd3430d51d5a2af277fb1ace0c464b1dc48"
 
+rule statfile:
+    output: "stat.nc"
+    shell: "cp {statpath} stat.nc"
+
 # This is a very large job.
-rule all_coarse_vars:
-    input: expand("coarse/3d/{field}.nc", field='U V W TABS QRAD QV QN QP'.split(' '))
+rule all:
+    input: expand("coarse/3d/{field}.nc", field='U V W TABS QRAD QV QN QP'.split(' ')),
+           "stat.nc"
 
 
 def get_stagger_dim_mode(input):
@@ -37,7 +46,7 @@ rule make_record_dim:
 
 
 def get_3d_files(wildcards):
-    pattern = f"{dataroot}/OUT_3D/*EQX_1280*{wildcards.field}.nc"
+    pattern = f"{dataroot}/OUT_3D/*{runid}*{wildcards.field}.nc"
     files = glob.glob(pattern)
     if len(files) == 0:
         raise ValueError("No files detected")
