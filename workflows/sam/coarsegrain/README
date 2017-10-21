@@ -10,5 +10,5 @@ Coarse grain data from the NGAqua simulation
 1. edit Snakefile.
 1a. dataroot should point to the root directory of the NGAqua run
 2a. workdir should point to the output directory
-2. run snakemake
-    snakemake
+2. Execute run.sh
+    
