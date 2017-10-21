@@ -1,6 +1,7 @@
 #!/bin/sh
 
-snakemake --config \
+snakemake all \
+    --config \
        runid=EQX_1280 \
        data=/home/disk/eos17/guest/SAM6.10.6_NG \
        stat=/home/disk/eos13/guest/SAM6.10.6_NG/OUT_STAT/NG_5120x2560x34_4km_10s_QOBS_EQX.nc \

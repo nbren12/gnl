@@ -18,7 +18,8 @@ rule statfile:
 # This is a very large job.
 rule all:
     input: expand("coarse/3d/{field}.nc", field='U V W TABS QRAD QV QN QP'.split(' ')),
-           "stat.nc"
+           "stat.nc",
+           "coarse/3d/W.destaggered.nc"
 
 
 def get_stagger_dim_mode(input):
@@ -57,3 +58,9 @@ rule all_record_vars:
     input: get_3d_files
     output: "coarse/3d/{field}.nc"
     script: "scripts/concat_many_files.py"
+
+rule destagger_w:
+    input: "coarse/3d/W.nc"
+    output: "coarse/3d/W.destaggered.nc"
+    script: "scripts/destagger_w.py"
+
