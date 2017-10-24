@@ -59,7 +59,12 @@ def centderiv(A, dim='x', boundary='periodic'):
     dim: str
         dimension to take derivative along
     boundary: str
-        boundary conditions along dimension. One of 'periodic', or 'extrap'.
+        boundary conditions along dimension. One of 'periodic', 'reflect',
+        'nearest', 'none', or an value.
+
+    See Also
+    --------
+    dask.array.ghost.ghost
 
     """
     return centdiff(A, dim=dim, boundary=boundary)/centspacing(A[dim])

@@ -1,0 +1,15 @@
+name: sam
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.6
+  - numpy
+  - dask
+  - xarray=0.9
+  - cython
+  - pip
+  - pip:
+      - git+https://github.com/nbren12/gnl@c3cb758d1013ca28c357aebb48b00407dba74a4e#subdirectory=packages/gnl
+      - git+https://github.com/nbren12/gnl@c3cb758d1013ca28c357aebb48b00407dba74a4e#subdirectory=packages/xnoah
+      - snakemake==4.0
