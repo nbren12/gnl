@@ -1,4 +1,13 @@
 #!/bin/sh
+# Merge a bitbucket repo into a local repo
+# 
+# Usage:
+#
+# merge_from_bitbucket.sh <repo name> <local destination> <category>
+#
+#
+# Examples:
+# merge_from_bitbucket.sh par ~/Dropbox/junk/defunct
 
 name=$1
 dest=$2
