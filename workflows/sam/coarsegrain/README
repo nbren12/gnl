@@ -1,0 +1,14 @@
+Coarse grain data from the NGAqua simulation
+
+# Instructions
+
+0. initialize environment
+    
+    conda env create environment.yml
+    source activate sam
+    
+1. edit Snakefile.
+1a. dataroot should point to the root directory of the NGAqua run
+2a. workdir should point to the output directory
+2. Execute run.sh
+    

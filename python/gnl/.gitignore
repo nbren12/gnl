@@ -1,0 +1,3 @@
+gnl/pdes/barotropic/swe.c
+gnl/pdes/petsc/kernel.c
+gnl/pdes/tadmor/tadmor.c
