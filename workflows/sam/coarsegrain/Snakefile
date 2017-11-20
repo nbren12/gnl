@@ -4,23 +4,25 @@ import json
 import glob
 import xnoah.sam.coarsen
 
-runid = config['runid']
-dataroot = config['data']
-statpath = config['stat']
+dataroot = "/home/disk/eos17/guest/SAM6.10.6_NG"
+stat_root = "/home/disk/eos13/guest/SAM6.10.6_NG/OUT_STAT"
+twod_root = "/home/disk/eos13/guest/SAM6.10.6_NG/OUT_2D"
+
+output_dir = config.get("output_dir")
+run_ids = config['run_ids']
 
 
-workdir: config['output']
-
-rule statfile:
-    output: "stat.nc"
-    shell: "cp {statpath} stat.nc"
 
 # This is a very large job.
 rule all:
-    input: expand("coarse/3d/{field}.nc", field='U V W TABS QRAD QV QN QP'.split(' ')),
-           "stat.nc",
-           "coarse/3d/W.destaggered.nc"
+    input: expand(["{run}/coarse/3d/{field}.nc", "{run}/stat.nc"], \
+                  field='U V W TABS QRAD QV QN QP'.split(' '),\
+                  run=run_ids),
 
+rule statfile:
+    input: stat_root + "/{run}.nc"
+    output: "{run}/stat.nc"
+    shell: "cp {input} {output}"
 
 def get_stagger_dim_mode(input):
     d = xr.open_dataset(input[0], cache=False)
@@ -47,7 +49,8 @@ rule make_record_dim:
 
 
 def get_3d_files(wildcards):
-    pattern = f"{dataroot}/OUT_3D/*{runid}*{wildcards.field}.nc"
+    run = wildcards.run
+    pattern = f"{dataroot}/OUT_3D/{run}_*_{wildcards.field}.nc"
     files = glob.glob(pattern)
     if len(files) == 0:
         raise ValueError("No files detected")
@@ -56,11 +59,11 @@ def get_3d_files(wildcards):
 
 rule all_record_vars:
     input: get_3d_files
-    output: "coarse/3d/{field}.nc"
+    output: "{run}/coarse/3d/{field}.nc"
     script: "scripts/concat_many_files.py"
 
 rule destagger_w:
-    input: "coarse/3d/W.nc"
-    output: "coarse/3d/W.destaggered.nc"
+    input: "{run}/coarse/3d/W.nc"
+    output: "{run}/coarse/3d/W.destaggered.nc"
     script: "scripts/destagger_w.py"
 
