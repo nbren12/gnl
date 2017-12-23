@@ -223,3 +223,37 @@ def baxis(x, size):
     ind[0] = slice(None)
 
     return x[ind]
+
+
+def combine_axes(x, axes, **kwargs):
+    """Combine axes and tranpose an array
+
+    Parameters
+    ----------
+    x : np.ndarray
+        input data
+    axes : seq
+        tuple of tuples
+    """
+    # flatten axes using a stack
+    axes_flat = []
+    stack = list(axes[::-1])
+    counter = 0
+    while stack:
+        ax = stack.pop()
+        if isinstance(ax, int):
+            axes_flat.append(ax)
+        else:
+            stack.extend(ax[::-1])
+
+
+    # get the new shape
+    sh  = []
+    for ax in axes:
+        if isinstance(ax, int):
+            sh.append(x.shape[ax])
+        else:
+            sh.append(np.prod([x.shape[aa] for aa in ax]))
+
+    return x.transpose(axes_flat).reshape(sh, **kwargs)
+
