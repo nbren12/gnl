@@ -257,3 +257,9 @@ def combine_axes(x, axes, **kwargs):
 
     return x.transpose(axes_flat).reshape(sh, **kwargs)
 
+
+def dftderiv(n, d=1.0, order=1):
+    """DFT derivative filter for n points spaced by d"""
+    ik =  2 * np.pi * 1j * np.fft.fftfreq(n, d=d)
+    return ik**order
+
