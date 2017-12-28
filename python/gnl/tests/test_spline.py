@@ -1,5 +1,5 @@
-from .spline import psplines
 import numpy as np
+from gnl.spline import psplines
 
 PLOT=False
 
