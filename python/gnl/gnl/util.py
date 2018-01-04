@@ -263,3 +263,10 @@ def dftderiv(n, d=1.0, order=1):
     ik =  2 * np.pi * 1j * np.fft.fftfreq(n, d=d)
     return ik**order
 
+
+def pad_along_axis(x, pad_width, mode, axis):
+    """Pad along a given axis
+    """
+    pad_widths = [(0, 0)]*x.ndim
+    pad_widths[axis] = pad_width
+    return np.pad(x, pad_widths, mode)
