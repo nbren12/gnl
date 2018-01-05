@@ -465,3 +465,13 @@ def swap_coord(x, swaps: dict):
                                      coords=(x[new_dim],))
         x = x.assign(**{old_dim: new_old_coord})
     return x
+
+
+def copy_attrs(src, dest):
+    """Copy attributes for all variables from src to dest
+    """
+    for k in src:
+        if k in dest:
+            dest[k].attrs.update(src[k].attrs)
+    dest.attrs.update(src.attrs)
+    return dest
