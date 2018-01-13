@@ -5,6 +5,10 @@ from xarray.core.computation import apply_ufunc
 
 from functools import wraps
 
+import logging
+
+logger = logging.getLogger(__file__)
+
 
 def dfun(func):
     @wraps(func)
@@ -156,11 +160,22 @@ def main(input, output, **kwargs):
 def snakemake(input, output, params):
     ds = xr.open_dataset(input[0])
     params = dict(params)
-    print(f"Coarse-graining {input[0]} with params:", params)
-    stagger_dim, mode = params.pop('stagger_dim')
-    coarsen(ds, stagger_dim=stagger_dim,
-            mode=mode, **params).to_netcdf(output[0])
+    logger.info(f"Coarse-graining {input[0]} with params:", params)
 
+    def mycoarsen(x):
+        if x.name[0] == 'U':
+            stagger_dim = 'x'
+            mode = 'wrap'
+        elif x.name[0] == 'V':
+            stagger_dim = 'y'
+            mode = 'clip'
+        else:
+            stagger_dim = None
+            mode = None
+        logger.debug("Stagger options for ", x.name," : ", stagger_dim, mode)
+        return coarsen(x, stagger_dim=stagger_dim, mode=mode, **params)
+
+    ds.apply(mycoarsen).to_netcdf(output[0])
 
 def test_coarsen():
     import os

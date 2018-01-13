@@ -16,9 +16,10 @@ run_ids = config['run_ids']
 
 # This is a very large job.
 rule all:
-    input: expand(["{run}/coarse/3d/{field}.nc", "{run}/stat.nc"], \
+    input: expand(["{run}/coarse/3d/{field}.nc", "{run}/stat.nc", "{run}/coarse/2d/all.nc"], \
                   field='U V W TABS QRAD QV QN QP'.split(' '),\
                   run=run_ids),
+          
 
 rule statfile:
     input: stat_root + "/{run}.nc"
@@ -28,7 +29,7 @@ rule statfile:
 def get_stagger_dim_mode(input):
     d = xr.open_dataset(input[0], cache=False)
     name = [d for d in d.data_vars if d != 'p'][0]
-    dim = {'U':'x', 'V':'y'}.get(name, None)
+    dim = {'U':'x', 'V':'y'}.get(name[0], None)
     mode = {'x': 'wrap'}.get(dim, 'clip')
     return dim, mode
 
@@ -38,8 +39,6 @@ rule coarsen_one_file:
     output: temp("tmp/coarse{f}.nc")
     params: blocks={'x': 40, 'y':40}
     run:
-        params = dict(params)
-        params['stagger_dim']=get_stagger_dim_mode(input)
         xnoah.sam.coarsen.snakemake(input, output, params)
 
 
@@ -58,10 +57,25 @@ def get_3d_files(wildcards):
     return [os.path.normpath(f"tmp/rec/tmp/coarse/{x}") for x in files]
 
 
+def get_2d_files(wildcards):
+    run = wildcards.run
+    pattern = f"{twod_root}/{run}_1280_*.nc"
+    files = glob.glob(pattern)
+    if len(files) == 0:
+        raise ValueError("No files detected")
+    return [os.path.normpath(f"tmp/rec/tmp/coarse/{x}") for x in files]
+
+
 rule all_record_vars:
     input: get_3d_files
     threads: 4
     output: "{run}/coarse/3d/{field}.nc"
+    script: "scripts/concat_many_files.py"
+
+rule all_2d_vars:
+    input: get_2d_files
+    threads: 4
+    output: "{run}/coarse/2d/all.nc"
     script: "scripts/concat_many_files.py"
 
 rule destagger_w:
