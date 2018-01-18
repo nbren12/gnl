@@ -19,7 +19,9 @@ rule all:
     input: expand(["{run}/coarse/3d/{field}.nc", "{run}/stat.nc", "{run}/coarse/2d/all.nc"], \
                   field='U V W TABS QRAD QV QN QP'.split(' '),\
                   run=run_ids),
-          
+
+rule all_2d:
+    input: expand(["{run}/coarse/2d/all.nc"], run=run_ids)
 
 rule statfile:
     input: stat_root + "/{run}.nc"
