@@ -1,7 +1,7 @@
 import dask.array as da
 import numpy as np
 import xarray as xr
-from xarray.core.computation import apply_ufunc
+from xarray import apply_ufunc
 
 from functools import wraps
 
@@ -144,7 +144,8 @@ def destagger(xarr, dim, **kwargs):
     return apply_ufunc(destagger_dask, xarr,
                        input_core_dims=[[dim]],
                        output_core_dims=[[dim]],
-                       dask_array='forbidden',
+                       dask='parallelized',
+                       output_dtypes=[xarr.dtype],
                        kwargs=kwargs)
 
 
