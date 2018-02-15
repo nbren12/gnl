@@ -161,10 +161,12 @@ def centered_to_left(f: xr.DataArray, block_size, dim, boundary='wrap'):
     new_coord = get_center_coords(f[dim].values, block_size)
     n = f.shape[f.get_axis_num(dim)]
 
-    f = (isel_bc(f, slice(0, n, block_size), dim, boundary=boundary) +
-         isel_bc(f, slice(-1, n-1, block_size), dim, boundary=boundary)) / 2
+    left = isel_bc(f, slice(0, n, block_size), dim, boundary=boundary)
+    left = left.assign_coords(**{dim: new_coord})
+    right = isel_bc(f, slice(-1, n-1, block_size), dim, boundary=boundary)
+    right = right.assign_coords(**{dim: new_coord})
 
-    return f.assign_coords(**{dim: new_coord})
+    return (left+right)/2
 
 
 def centered_to_right(f: xr.DataArray, block_size, dim, boundary='wrap'):
@@ -188,10 +190,13 @@ def centered_to_right(f: xr.DataArray, block_size, dim, boundary='wrap'):
 
     left_idx = slice(block_size, n+1, block_size)
     right_idx = slice(block_size-1, n, block_size)
-    f = (isel_bc(f, left_idx, dim, boundary=boundary) +
-         isel_bc(f, right_idx, dim, boundary=boundary)) / 2
 
-    return f.assign_coords(**{dim: new_coord})
+    left = isel_bc(f, left_idx, dim, boundary=boundary)
+    left = left.assign_coords(**{dim: new_coord})
+    right = isel_bc(f, right_idx, dim, boundary=boundary)
+    right = right.assign_coords(**{dim: new_coord})
+
+    return (left+right)/2
 
 
 def dfun(func):
