@@ -2,7 +2,7 @@ import numpy as np
 import xarray as xr
 from xarray.testing import assert_equal
 
-from .regrid import (coarsen, destagger, staggered_to_left,
+from .regrid import (coarsen, coarsen_dim, destagger, staggered_to_left,
                      staggered_to_right, centered_to_left, centered_to_right,
                      isel_bc, get_center_coords)
 
@@ -26,8 +26,15 @@ def test_coarsen_staggered():
     x = xr.DataArray(np.arange(10), dims=['x'])
     x = x.assign_coords(x=x)
     y = coarsen(x, {'x' : 5})
-    np.testing.assert_equal(y.coords['x'].values,
-                            [2.5, 7.5])
+    np.testing.assert_equal(y.coords['x'].values, [2.5, 7.5])
+
+
+def test_coarsen_dim():
+    x = xr.DataArray(np.arange(10), dims=['x'])
+    x = x.assign_coords(x=x)
+    y = coarsen(x, {'x' : 5})
+    np.testing.assert_equal(y.coords['x'].values, [2.5, 7.5])
+    np.testing.assert_equal(y.values, [2, 7])
 
 
 def test__to_left_to_right():

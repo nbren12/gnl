@@ -289,6 +289,10 @@ def coarsen(A, blocks=None, stagger_dim=None, mode='wrap'):
                         name=A.name)
 
 
+def coarsen_dim(d: xr.DataArray, block_size, dim):
+    return coarsen(d, blocks={dim: block_size})
+
+
 def boundary_points(x, blocks, stagger_dim=None):
     """
     """
