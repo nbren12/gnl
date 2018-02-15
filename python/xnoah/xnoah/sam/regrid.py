@@ -1,3 +1,4 @@
+from collections import Iterable
 import dask.array as da
 from scipy.ndimage import correlate1d
 import numpy as np
@@ -53,24 +54,144 @@ def _divergence(fx, fy):
     return ux + vy
 
 
-def _to_left(f, blocks=None, axis=-1):
-    """Get values on the left interface"""
-    f = _blocks_view(f, blocks)
-    # y direction
-    if axis == 3:
-        return f[:,:,:,0:1]
-    else:
-        return f[:,:,:,:,:,0:1]
+def _slice_to_range(s: slice, n=None):
+    start, stop, step = s.start, s.stop, s.step
+    if start is None:
+        start = 0
+    if stop is None:
+        raise ValueError("Need to explicitly give the stop")
+    if step is None:
+        step = 1
+    return range(start, stop, step)
 
 
-def _to_right(f, blocks=None, axis=-1):
-    """get values on the right interface"""
-    f = _blocks_view(f, blocks)
-    # y direction
-    if axis == 3:
-        return f[:,:,:,-2:-1]
+def isel_bc(da: xr.DataArray, idx, dim, boundary='wrap'):
+    """Select points along axis with ghosting given by a boundary condition
+    """
+
+    n = da.shape[da.get_axis_num(dim)]
+    if isinstance(idx, slice):
+        if idx.stop is None:
+            idx = slice(idx.start, n, idx.step)
+        idx = _slice_to_range(idx)
+    elif not isinstance(idx, Iterable):
+        idx = [idx]
+
+    idx = np.asarray(idx)
+
+    if boundary == 'wrap':
+        idx = idx % n
+    elif boundary == 'extrap':
+        idx[idx < 0] = 0
+        idx[idx >= n] = n-1
     else:
-        return f[:,:,:,:,:,-2:-1]
+        raise ValueError("Received unknown boundary condition value")
+
+    return da.isel(**{dim: idx})
+
+
+def get_center_coords(x, block_size):
+    x = np.r_[x, 2*x[-1] - x[-2]]
+    left = x[0:-1:block_size]
+    right = x[block_size::block_size]
+    return (left+right)/2
+
+
+def staggered_to_left(f, block_size, dim):
+    """Move staggered variable to the left interface
+
+    Parameters
+    ----------
+    f : xr.DataArray
+    block_size : size of the coarse graining block
+    dim : str
+    boundary : str, optional
+        A boundary condition which is passed to `isel_bc`
+
+    Returns
+    -------
+    interface : xr.DataArray
+        The value of f along the left interfaces of the coarse-grain blocks
+    """
+    new_coord = get_center_coords(f[dim].values, block_size)
+    f = isel_bc(f, slice(0, None, block_size), dim)
+    return f.assign_coords(**{dim: new_coord})
+
+
+def staggered_to_right(f: xr.DataArray, block_size, dim, boundary='wrap'):
+    """Move staggered variable to the right interface
+
+    Parameters
+    ----------
+    f : xr.DataArray
+    block_size : size of the coarse graining block
+    dim : str
+    boundary : str, optional
+        A boundary condition which is passed to `isel_bc`
+
+    Returns
+    -------
+    interface : xr.DataArray
+        The value of f along the right interfaces of the coarse-grain blocks
+    """
+    n = f.shape[f.get_axis_num(dim)]
+    new_coord = get_center_coords(f[dim].values, block_size)
+
+    idx = slice(block_size, n+block_size, block_size)
+    f = isel_bc(f, idx, dim, boundary=boundary)
+    return f.assign_coords(**{dim: new_coord})
+
+
+def centered_to_left(f: xr.DataArray, block_size, dim, boundary='wrap'):
+    """Move centered variable to the left interface
+
+    Parameters
+    ----------
+    f : xr.DataArray
+    block_size : size of the coarse graining block
+    dim : str
+    boundary : str, optional
+        A boundary condition which is passed to `isel_bc`
+
+    Returns
+    -------
+    interface : xr.DataArray
+        The value of f along the left interfaces of the coarse-grain blocks
+    """
+    new_coord = get_center_coords(f[dim].values, block_size)
+    n = f.shape[f.get_axis_num(dim)]
+
+    f = (isel_bc(f, slice(0, n, block_size), dim, boundary=boundary) +
+         isel_bc(f, slice(-1, n-1, block_size), dim, boundary=boundary)) / 2
+
+    return f.assign_coords(**{dim: new_coord})
+
+
+def centered_to_right(f: xr.DataArray, block_size, dim, boundary='wrap'):
+    """Move centered variable to the right interface
+
+    Parameters
+    ----------
+    f : xr.DataArray
+    block_size : size of the coarse graining block
+    dim : str
+    boundary : str, optional
+        A boundary condition which is passed to `isel_bc`
+
+    Returns
+    -------
+    interface : xr.DataArray
+        The value of f along the right interfaces of the coarse-grain blocks
+    """
+    new_coord = get_center_coords(f[dim].values, block_size)
+    n = f.shape[f.get_axis_num(dim)]
+
+    left_idx = slice(block_size, n+1, block_size)
+    right_idx = slice(block_size-1, n, block_size)
+    f = (isel_bc(f, left_idx, dim, boundary=boundary) +
+         isel_bc(f, right_idx, dim, boundary=boundary)) / 2
+
+    return f.assign_coords(**{dim: new_coord})
 
 
 def dfun(func):
