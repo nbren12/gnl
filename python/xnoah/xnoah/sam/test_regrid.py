@@ -23,6 +23,12 @@ def test_coarsen_staggered():
 
     assert_equal(c1.transpose(*c2.dims), c2)
 
+    x = xr.DataArray(np.arange(10), dims=['x'])
+    x = x.assign_coords(x=x)
+    y = coarsen(x, {'x' : 5})
+    np.testing.assert_equal(y.coords['x'].values,
+                            [2.5, 7.5])
+
 
 def test__to_left_to_right():
     x = xr.DataArray(np.arange(10), dims=['x'])

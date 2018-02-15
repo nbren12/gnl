@@ -280,12 +280,8 @@ def coarsen(A, blocks=None, stagger_dim=None, mode='wrap'):
     coords = {}
     for k in A.coords:
         if k in blocks:
-            c  = A[k].data
-            dim = da.from_array(c, chunks=(len(c), ))
-
-            q = blocks[k]
-            dim = da.coarsen(np.mean, dim, {0: q}).compute()
-            coords[k] = dim
+            c  = A[k].values
+            coords[k] = get_center_coords(c, blocks[k])
         else:
             coords[k] = A.coords[k]
 
