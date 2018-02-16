@@ -1,32 +1,25 @@
 import xarray as xr
-import dask
-from xnoah.xarray import coarsen
-import joblib
-
-def f(x, ncoarse=40):
-    if set(x.dims) >= set(['x', 'y']):
-        return coarsen(x, x=ncoarse, y=ncoarse)
-    else:
-        return x
+from xnoah import sam
 
 
-def destagger(x, dim):
-    """Destagger input data array along dimension"""
-    pass
-    # TODO implement
-    # assert that data not be chunked along x
-    # or write a shift function that has different boundary conditions
+def coarse_grain_with_tendencies(ds, blocks):
+    variables = {}
 
-def main(input, output, ncoarse=40):
-    ds = xr.open_dataset(input)
+    for scalar in ['QN', 'QP', 'TABS', 'QV']:
+        variables[f'div{scalar}'] = sam.advect_scalar(ds.U, ds.V, ds[scalar], blocks=blocks)
+
+    for variable in ['QV', 'QN', 'QP', 'TABS', 'PP', 'QRAD', 'W']:
+        variables[variable] = sam.coarsen(ds[variable], blocks=blocks)
+
+    variables['U'] = sam.coarsen(ds.U, blocks, stagger_dim='x')
+    variables['V'] = sam.coarsen(ds.V, blocks, stagger_dim='y', mode='clip')
+    return xr.Dataset(variables)
 
 
-    ds_coarse = ds.apply(f)
+def main():
+    ds = xr.open_mfdataset(snakemake.input).load()
+    out = coarse_grain_with_tendencies(ds, blocks=snakemake.params.blocks)
+    out.to_netcdf(snakemake.output[0])
 
-    ds_coarse.to_netcdf(output)
-try:
-    snakemake
-except NameError:
-    pass
-else:
-    main(snakemake.input[0], snakemake.output[0])
+
+main()

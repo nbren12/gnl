@@ -1,8 +1,10 @@
 run_ids:
     - "NG_5120x2560x34_4km_10s_QOBS_EQX"
-    - "NG_5120x2560x34_4km_10s_QOBS_EQX_4K"
+#    - "NG_5120x2560x34_4km_10s_QOBS_EQX_4K"
 output_dir: "/home/disk/eos4/nbren12/eos8/Data/id/2"
-dataroot: "/home/disk/eos17/guest/SAM6.10.6_NG"
+dataroot: "/home/disk/eos7/guest/SAM6.10.6_NG/continuation/OUT_3D"
+stat_root: "/home/disk/eos13/guest/SAM6.10.6_NG/OUT_STAT"
+twod_root:  "/home/disk/eos13/guest/SAM6.10.6_NG/OUT_2D"
 fields_2d:
     - "Prec"
     - "SHF"

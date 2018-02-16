@@ -2,14 +2,13 @@ import xarray as xr
 import os
 import json
 import glob
-import xnoah.sam.coarsen
 
-dataroot = "/home/disk/eos17/guest/SAM6.10.6_NG"
-stat_root = "/home/disk/eos13/guest/SAM6.10.6_NG/OUT_STAT"
-twod_root = "/home/disk/eos13/guest/SAM6.10.6_NG/OUT_2D"
+configfile: "config.yaml"
 
-
-output_dir = config.get("output_dir")
+dataroot = config['dataroot']
+stat_root = config['stat_root']
+twod_root = config['twod_root']
+output_dir = config["output_dir"]
 run_ids = config['run_ids']
 
 
@@ -35,13 +34,17 @@ def get_stagger_dim_mode(input):
     mode = {'x': 'wrap'}.get(dim, 'clip')
     return dim, mode
 
+def _time_step_ncs(wildcards):
+    fields = ['QV', 'QN', 'QP', 'U', 'V', 'W', 'QRAD', 'TABS', 'PP']
+    files = expand(f"{dataroot}/{wildcards.run}_{wildcards.time}_" + "{field}.nc",
+                  field=fields)
+    return files
 
-rule coarsen_one_file:
-    input: "{f}.nc"
-    output: temp("tmp/coarse{f}.nc")
+rule coarsen_one_time_step:
+    input: _time_step_ncs
+    output: "tmp/coarse/{run}/{time}.nc"
     params: blocks={'x': 40, 'y':40}
-    run:
-        xnoah.sam.coarsen.snakemake(input, output, params)
+    script: "scripts/coarsen.py"
 
 
 rule make_record_dim:
@@ -52,7 +55,7 @@ rule make_record_dim:
 
 def get_3d_files(wildcards):
     run = wildcards.run
-    pattern = f"{dataroot}/OUT_3D/{run}_1280_*_{wildcards.field}.nc"
+    pattern = f"{dataroot}/{run}_1280_*_{wildcards.field}.nc"
     files = glob.glob(pattern)
     if len(files) == 0:
         raise ValueError("No files detected")
