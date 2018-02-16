@@ -245,8 +245,10 @@ def coarsen_destagger_dask(x, blocks, stagger=None, mode='wrap'):
         # handle boundary conditions
         if mode == 'wrap':
             bc = da.take(left, [0], axis=stagger)
-        if mode == 'clip':
+        elif mode == 'clip':
             bc = da.take(left, [-1], axis=stagger)
+        else:
+            raise ValueError(f"Unknown boundary `mode` given: {mode}")
 
         right = da.take(left, np.arange(1, n), axis=stagger)
         right = da.concatenate((right, bc), axis=stagger)
