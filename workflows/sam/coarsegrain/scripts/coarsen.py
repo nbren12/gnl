@@ -12,7 +12,7 @@ def coarse_grain_with_tendencies(ds, blocks):
         variables[variable] = sam.coarsen(ds[variable], blocks=blocks)
 
     variables['U'] = sam.coarsen(ds.U, blocks, stagger_dim='x')
-    variables['V'] = sam.coarsen(ds.V, blocks, stagger_dim='y', mode='clip')
+    variables['V'] = sam.coarsen(ds.V, blocks, stagger_dim='y', mode='extrap')
     return xr.Dataset(variables)
 
 
