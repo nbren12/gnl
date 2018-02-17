@@ -209,6 +209,30 @@ def dfun(func):
     return f
 
 
+def blocks_view(x, blocks):
+    new_shape = []
+    avg_dims = []
+    for k in range(x.ndim):
+        n = x.shape[k]
+        if k in blocks:
+            q = n//blocks[k]
+            r = n % blocks[k]
+            if r != 0:
+                raise ValueError
+
+            new_shape.extend((q, blocks[k]))
+            avg_dims.append(len(new_shape)-1)
+        else:
+            new_shape.append(n)
+
+    return x.reshape(new_shape), tuple(avg_dims)
+
+
+def coarsen_centered_np(x, blocks):
+    x, avg_dims = blocks_view(x, blocks)
+    return x.mean(avg_dims)
+
+
 def coarsen_destagger_dask(x, blocks, stagger=None, mode='wrap'):
     """
 
@@ -232,7 +256,7 @@ def coarsen_destagger_dask(x, blocks, stagger=None, mode='wrap'):
         output_numpy = True
         x = da.from_array(x, x.shape)
 
-    xcoarse = da.coarsen(np.sum, x, blocks)
+    xcoarse = coarsen_centered_np(x, blocks)
     # TODO refactor this code to another function
     if stagger is not None:
         blk = {key: val
@@ -263,25 +287,12 @@ def coarsen_destagger_dask(x, blocks, stagger=None, mode='wrap'):
         return ans
 
 
-@dfun
-def coarsen(A, blocks=None, stagger_dim=None, mode='wrap'):
-    """coarsen and potentially destagger a 
-    """
-    if stagger_dim is not None and stagger_dim not in blocks:
-        raise ValueError(f"stagger_dim \"{stagger_dim}\" is not in blocks")
 
-    blocks = {k:blocks[k] for k in blocks
+def coarsen_centered(A, blocks):
+    blocks = {k: blocks[k] for k in blocks
               if k in A.dims}
-
-    if len(blocks) == 0:
-        return A
-
-    kwargs = {'mode': mode}
-    if stagger_dim is not None:
-        kwargs['stagger'] = A.get_axis_num(stagger_dim)
-
     np_blocks = {A.get_axis_num(dim): val for dim, val in blocks.items()}
-    vals = coarsen_destagger_dask(A.data, np_blocks, **kwargs)
+    vals = coarsen_centered_np(A.data, np_blocks)
 
     # coarsen dimension
     coords = {}
@@ -294,6 +305,34 @@ def coarsen(A, blocks=None, stagger_dim=None, mode='wrap'):
 
     return xr.DataArray(vals, dims=A.dims, coords=coords, attrs=A.attrs,
                         name=A.name)
+
+
+def coarsen_staggered(A, blocks, stagger_dim, mode='wrap'):
+    if stagger_dim is not None and stagger_dim not in blocks:
+        raise ValueError(f"stagger_dim \"{stagger_dim}\" is not in blocks")
+
+    blocks = blocks.copy()
+
+    c = coarsen_centered(A, blocks)
+
+    block_size = blocks.pop(stagger_dim)
+    left = staggered_to_left(A, block_size, stagger_dim)
+    left = coarsen_centered(left, blocks)
+
+    right = staggered_to_right(A, block_size, stagger_dim, boundary=mode)
+    right = coarsen_centered(right, blocks)
+
+    return c + (-left + right)/2/block_size
+
+
+@dfun
+def coarsen(A, blocks=None, stagger_dim=None, mode='wrap'):
+    """coarsen and potentially destagger a 
+    """
+    if stagger_dim:
+        return coarsen_staggered(A, blocks, stagger_dim, mode=mode)
+    else:
+        return coarsen_centered(A, blocks)
 
 
 def coarsen_dim(d: xr.DataArray, block_size, dim):
