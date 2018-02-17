@@ -21,7 +21,7 @@ def open_files(xs):
 def concat(xs):
     print("concatenating")
     len(xs)
-    xr.auto_combine(xs, concat_dim='time').to_netcdf(snakemake.output[0])
+    xr.auto_combine(xs, concat_dim='time').sortby('time').to_netcdf(snakemake.output[0])
 
 
 rx.Observable.from_(files)\
