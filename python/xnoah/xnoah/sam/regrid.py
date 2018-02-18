@@ -90,6 +90,14 @@ def isel_bc(da: xr.DataArray, idx, dim, boundary='wrap'):
     return da.isel(**{dim: idx})
 
 
+def shift_bc(da: xr.DataArray, shift: int, dim:str, **kwargs):
+    """Shift data keeping coordinates in place."""
+    n = da.shape[da.get_axis_num(dim)]
+    idx = np.arange(shift, n+shift)
+    return (isel_bc(da, idx, dim, **kwargs)
+        .assign_coords(**{dim: da[dim]}))
+
+
 def get_center_coords(x, block_size):
     x = np.r_[x, 2*x[-1] - x[-2]]
     left = x[0:-1:block_size]

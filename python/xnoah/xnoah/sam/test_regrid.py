@@ -1,11 +1,13 @@
 import numpy as np
 import xarray as xr
 from xarray.testing import assert_equal
+import pytest
 
 from .regrid import (coarsen, coarsen_dim, destagger, staggered_to_left,
                      staggered_to_right, centered_to_left, centered_to_right,
                      isel_bc, get_center_coords, coarsen_centered_np,
-                     coarsen_centered, coarsen_staggered)
+                     coarsen_centered, coarsen_staggered, shift_bc)
+
 
 def test_coarsen():
     x = xr.DataArray(np.arange(10), dims=['x'])
@@ -116,3 +118,19 @@ def test_get_center_coords():
     x = np.arange(10)
     y = get_center_coords(x, 5)
     np.testing.assert_equal(y, [2.5, 7.5])
+
+
+@pytest.mark.parametrize("shift, boundary, expected", [
+    (1, "extrap", np.r_[1:10, 9]),
+    (1, "wrap", np.r_[1:10, 0]),
+    (-1, "extrap", np.r_[0, 0:9]),
+    (-1, "wrap", np.r_[9, 0:9]),
+])
+def test_shift_bc(shift, boundary, expected):
+    x = xr.DataArray(np.arange(10), dims=['x'])
+    x = x.assign_coords(x=x)
+
+    y = shift_bc(x, shift, 'x', boundary=boundary)
+    np.testing.assert_equal(y.values, expected)
+    np.testing.assert_equal(y.x.values, x.x.values)
+
