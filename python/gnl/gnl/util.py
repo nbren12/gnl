@@ -2,6 +2,7 @@ from functools import wraps
 from toolz import *
 from numpy import dot
 import numpy as np
+import scipy.ndimage as nd
 
 
 # Functional programming stuff
@@ -116,8 +117,7 @@ def fftdiff(u, L=4e7, axis=-1):
     return np.moveaxis(ud, -1, axis)
 
 
-def phaseshift(x, time, arr, c=0, x_index=0, time_index=-1,
-               xmax=None):
+def phaseshift(x, time, arr, c=0, t0=0, mode='wrap'):
     """Phase shift an array
 
     This is useful for examining simulation output in the moving frame.
@@ -129,8 +129,8 @@ def phaseshift(x, time, arr, c=0, x_index=0, time_index=-1,
        horizontal axis
     time: (m,)
        vertical axis
-    arr: (m, n)
-       datavalues on (x,t) grid
+    arr: (m, ..., n)
+       data on (x,t) grid
     c: float
        speed of wave to track
 
@@ -143,34 +143,24 @@ def phaseshift(x, time, arr, c=0, x_index=0, time_index=-1,
     Does not work for periodic data yet
 
     """
-    from scipy.interpolate import interp1d
+    dx = x[1] - x[0]
 
-    out_arr = np.zeros_like(arr)
+    assert len(time) == arr.shape[0]
+    assert len(x) == arr.shape[-1]
 
-    if xmax is None:
-        xmax = x[-1] + (x[1] - x[0])
+    def shift_slice(f, t):
+        delta_grid = (t - t0) * c / dx
+        shift = [0]*f.ndim
+        shift[-1] = -delta_grid
 
-    time_index = time_index % arr.ndim
-    x_index = x_index % arr.ndim
+        pad = [(0,0)]*f.ndim
+        pad[-1] = (0, 1)
+        f = np.pad(f, pad, mode=mode)
+        return nd.shift(f, shift, mode=mode)[..., :-1]
 
-    subset_x_index = x_index - 1 if time_index < x_index else x_index
-
-    for t in range(arr.shape[time_index]):
-        sl = [slice(None)] * arr.ndim
-        sl[time_index] = t
-
-        sl1 = sl.copy()
-        sl1[x_index] = slice(0, 1)
-
-        # TODO: this array padding only works for linear or nn interpolation
-        subset = np.concatenate((arr[sl], arr[sl1]), subset_x_index)
-        xx = np.concatenate((x, [xmax, ]))
-
-        f = interp1d(xx, subset, axis=subset_x_index)
-
-        out_arr[sl] = f((x + c * time[t]) % xmax)
-
-    return out_arr
+    return np.stack([shift_slice(arr[k], time[k])
+                     for k in range(time.shape[0])],
+                    axis=0)
 
 def linearf2matrix(fun, n):
     """

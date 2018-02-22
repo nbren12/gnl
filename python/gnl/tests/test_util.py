@@ -33,29 +33,26 @@ def test_dftderiv():
 
 def test_phaseshift():
 
-    x = np.linspace(0, 1, 101)[:-1]
-    t = np.linspace(0, 10, 101)
+    x = np.arange(20)
+    t = np.array([0, 1, 2])
 
     xx, tt = np.meshgrid(x, t)
 
-    c = 2
-    u = np.sin(2 * np.pi * 8 * (xx - c * tt))
-    u_flat = np.sin(2 * np.pi * 8 * xx)
+    c = 10
+    u = np.sin(2 * np.pi * 2 * (xx - c * tt)/20)
+    u_flat = np.sin(2 * np.pi * 2 * xx/20)
 
-    u_phase_shifted = phaseshift(x, t, u, c=c, x_index=-1, time_index=0)
+    u_phase_shifted = phaseshift(x, t, u, c=c)
     np.testing.assert_allclose(u_flat, u_phase_shifted, atol=1e-4)
 
     # import matplotlib.pyplot as plt
     # plt.subplot(211)
-    # plt.contourf(u_phase_shifted)
+    # plt.pcolormesh(u_phase_shifted)
     #
     # plt.subplot(212)
-    # plt.contourf(u_flat)
+    # plt.pcolormesh(u_flat)
     # plt.show()
 
-    # test for transpose
-    u_phase_shifted = phaseshift(x, t, u.T, c=c, x_index=0, time_index=1)
-    np.testing.assert_allclose(u_flat.T, u_phase_shifted, atol=1e-4)
 
 
 def test_linearf2matrix():
