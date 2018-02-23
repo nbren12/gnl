@@ -117,7 +117,7 @@ def fftdiff(u, L=4e7, axis=-1):
     return np.moveaxis(ud, -1, axis)
 
 
-def phaseshift(x, time, arr, c=0, t0=0, mode='wrap'):
+def phaseshift(x, time, arr, c=0, t0=0, mode='wrap', **kwargs):
     """Phase shift an array
 
     This is useful for examining simulation output in the moving frame.
@@ -156,7 +156,7 @@ def phaseshift(x, time, arr, c=0, t0=0, mode='wrap'):
         pad = [(0,0)]*f.ndim
         pad[-1] = (0, 1)
         f = np.pad(f, pad, mode=mode)
-        return nd.shift(f, shift, mode=mode)[..., :-1]
+        return nd.shift(f, shift, mode=mode, **kwargs)[..., :-1]
 
     return np.stack([shift_slice(arr[k], time[k])
                      for k in range(time.shape[0])],
