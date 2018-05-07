@@ -1,7 +1,8 @@
 import numpy as np
 import xarray as xr
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, TruncatedSVD
 import argparse
+import gnl
 
 
 def stack(x):
@@ -76,6 +77,59 @@ def weighted_eofs(da, wgt='coslat', n_components=10,
         'wgt': wgt,
         'variance': variance
     })
+
+
+def weighted_dmd(da, wgt='coslat',
+                 component_dim_name='dim',
+                 n_components=10,
+                 **kwargs):
+    """
+
+    Parameters
+    ----------
+    da : DataArray (lat, lon)
+        Input DataArray
+    wgt : DataArray (lat) or str
+        weights. Default: 'coslat'
+    n_components : int
+        number of EOFs to extract
+
+    Returns
+    -------
+    eofs_analysis: xr.Dataset
+        dataset with eofs, pcs, and singular values
+
+    """
+
+    if set(da.dims) < set(['lat', 'lon']):
+        raise NotImplementedError("This function only accepts lat/lon data at "
+                                  "the moment.")
+
+    if wgt == 'coslat':
+        wgt = np.cos(np.deg2rad(da.lat))
+
+    # flatten data
+    X = stack(da * np.sqrt(wgt))
+
+    kwargs['n_components'] = n_components
+    lam, phi, atilde = gnl.exact_dmd(X, **kwargs)
+
+    # get pcs
+    dims = ['time', component_dim_name]
+
+    comp_coord = np.arange(n_components)
+    dmds = unstack(phi, X.coords, dim_name=component_dim_name) \
+           / np.sqrt(wgt)
+
+    lam = xr.DataArray(lam, dims=component_dim_name,
+                       coords={component_dim_name: comp_coord})
+
+    return xr.Dataset({
+        'dmds': dmds,
+        'lam': lam,
+    })
+
+
 
 
 def main():
