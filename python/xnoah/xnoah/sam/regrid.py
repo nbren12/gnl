@@ -397,6 +397,26 @@ def destagger(xarr, dim, **kwargs):
                        kwargs=kwargs)
 
 
+def average_west(u, blocks):
+    """Average U along the Western edges of the block regions"""
+    w = rg.staggered_to_left(u, blocks['x'], 'x')
+    x = u['x'][::blocks['x']]
+    w['x'] = x
+    # average fluxes over the interface
+    return rg.coarsen_dim(w, blocks['y'], 'y')\
+        .rename({'x': 'xs', 'y': 'yc'})
+
+
+def average_south(v, blocks):
+    """Average V along the southern edges of the block regions"""
+    s = rg.staggered_to_left(v, blocks['y'], 'y')
+    y = v['y'][::blocks['y']]
+    s['y'] = y
+    # average fluxes over the interface
+    return rg.coarsen_dim(s, blocks['x'], 'x')\
+        .rename({'y': 'ys', 'y': 'yc'})
+
+
 def main(input, output, **kwargs):
     ds = xr.open_dataset(input)
     coarsen(ds, **kwargs).to_netcdf(output)
