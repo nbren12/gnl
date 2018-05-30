@@ -15,7 +15,8 @@ run_ids = config['run_ids']
 
 # This is a very large job.
 rule all:
-    input: expand(["{run}/coarse/3d/all.nc", "{run}/stat.nc", "{run}/coarse/2d/all.nc"], \
+    input: expand(["{run}/stagger/3d/all.nc",\
+                   "{run}/coarse/3d/all.nc", "{run}/stat.nc", "{run}/coarse/2d/all.nc"], \
                   run=run_ids),
 
 rule all_2d:
@@ -28,7 +29,7 @@ rule statfile:
 
 def _time_step_ncs(wildcards):
     fields = ['QV', 'QN', 'QP', 'U', 'V', 'W', 'QRAD', 'TABS', 'PP']
-    files = expand(f"{dataroot}/{wildcards.run}_{wildcards.time}_" + "{field}.nc",
+    files = expand(f"{dataroot}/{wildcards.run}_1280_{wildcards.time}_" + "{field}.nc",
                   field=fields)
     return files
 
@@ -40,7 +41,7 @@ rule coarsen_one_time_step:
 
 def _time_step_vels(wildcards):
     fields = ['U', 'V']
-    files = expand(f"{dataroot}/{wildcards.run}_{wildcards.time}_" + "{field}.nc",
+    files = expand(f"{dataroot}/{wildcards.run}_1280_{wildcards.time}_" + "{field}.nc",
                     field=fields)
     return files
 
@@ -77,8 +78,9 @@ def get_3d_files(wildcards):
 
 def get_2d_files(wildcards):
     run = wildcards.run
-    pattern = f"{twod_root}/{run}_1280_*.nc"
-    files = glob.glob(pattern)
+    pattern = re.compile(f"{run}_\d+_.*.nc")
+    files = list(filter(pattern.search, os.listdir(twod_root)))
+
     if len(files) == 0:
         raise ValueError("No files detected")
     return [os.path.normpath(f"tmp/rec/tmp/coarse/{x}") for x in files]
