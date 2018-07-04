@@ -268,20 +268,22 @@ class XRReshaper(object):
 def coarsen(A, fun=np.mean, **kwargs):
     """Coarsen DataArray using reduction
 
+    This function works with dask arrays.
+
     Parameters
     ----------
     A: DataArray
-    axis: str
-        name of axis
-    q: int
-        coarsening factor
+        Can be a dask array
     fun:
-        reduction operator
+        reduction operator. Default is np.mean.
+    **kwargs
+        coarsening information along a dimension. Passed as 'dim=coarsening'
+        pairs. Multidimensional coordinates are not supported.
 
     Returns
     -------
     y: DataArray
-
+        Coarsened data.
 
     Examples
     --------
