@@ -122,26 +122,28 @@ def phaseshift(x, time, arr, c=0, t0=0, mode='wrap', **kwargs):
 
     This is useful for examining simulation output in the moving frame.
 
-
     Parameters
     ----------
     x: (n,)
        horizontal axis
     time: (m,)
-       vertical axis
-    arr: (m, ..., n)
-       data on (x,t) grid
+        Array of time balues
+    arr: (n, ..., m)
+        Data to be shifted. The time axis is the first axis and the phase
+        shifting axis is the last.
     c: float
-       speed of wave to track
+       Speed of wave to track
+    t0
+       Initial time point. The shifted data will have the same spatial
+       coordinate as this time point.
+    mode : str
+        Mode to be passed to `np.pad`. Default is 'wrap'.
+    **kwargs
+        Keyword arguments for scipy.ndimage.shift
 
     Returns
     --------
     phase shifted array
-
-    Notes
-    -----
-    Does not work for periodic data yet
-
     """
     dx = x[1] - x[0]
 
