@@ -7,6 +7,8 @@ import xarray as xr
 from .datasets import tiltwave
 from .xcalc import centderiv, centspacing, dask_centdiff
 
+PLOT = False
+
 
 def test_dask_centderiv():
     x, y = np.mgrid[0:2 * np.pi:10j, 0:2 * np.pi:10j]
@@ -25,7 +27,7 @@ def test_centdiff():
     B = centderiv(A, dim='z')
     B = A.centderiv(dim='z')
 
-    if True:
+    if PLOT:
         import matplotlib as mpl
         import matplotlib.pyplot as plt
 

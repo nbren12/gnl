@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import xarray as xr
 from . import xarray
@@ -41,7 +42,9 @@ def test_reshape():
     return 0
 
 
-def test_wrapcli():
+def test_wrapcli(tmpdir):
+
+    os.chdir(tmpdir)
 
     @xarray.wrapcli
     def theta(A, B):
@@ -50,8 +53,7 @@ def test_wrapcli():
 
     tiltwave().to_dataset(name="A").to_netcdf("test.nc")
     tiltwave().to_dataset(name="B").to_netcdf("testB.nc")
-
-    AB = theta("A", "B", data=["test.nc", "testB.nc"])
+    theta("A", "B", data=["test.nc", "testB.nc"])
 
 
 def test_map_overlap():
