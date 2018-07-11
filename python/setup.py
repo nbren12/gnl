@@ -41,5 +41,5 @@ def get_ext_modules():
 setup(
     name='xnoah',
     version='0.0dev',
-    packages=['xnoah', 'xnoah.sam', 'gnl', 'gnl.filter'],
+    packages=['gnl.xarray', 'gnl.xarray.sam', 'gnl', 'gnl.filter'],
     license='Creative Commons Attribution-Noncommercial-Share Alike license')

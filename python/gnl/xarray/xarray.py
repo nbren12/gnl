@@ -451,24 +451,6 @@ def map_overlap(x, func, depth, boundary=None, **kwargs):
     return xr.DataArray(out_dask, x.coords)
 
 
-def swap_coord(x, swaps: dict):
-    """Change a coordinate to a variable
-    """
-    for old_dim, new_dim in swaps.items():
-
-        old_coord = x[old_dim]
-
-        x = x.drop(old_dim)\
-             .assign(**{old_dim: x[new_dim]})\
-             .drop(new_dim)\
-             .rename({old_dim: new_dim})
-
-        new_old_coord = xr.DataArray(old_coord.values,
-                                     coords=(x[new_dim],))
-        x = x.assign(**{old_dim: new_old_coord})
-    return x
-
-
 def copy_attrs(src, dest):
     """Copy attributes for all variables from src to dest
     """

@@ -2,7 +2,6 @@ import os
 import numpy as np
 import xarray as xr
 from . import xarray
-from .xarray import swap_coord
 from .datasets import tiltwave, rand3d
 
 
@@ -64,17 +63,3 @@ def test_map_overlap():
 
     y = xarray.map_overlap(a.chunk(), fun, {'x': 1}, {'x': 'periodic'})
     np.testing.assert_allclose(y.values, a.values)
-
-
-def test_swap_coord():
-    x = np.arange(10)
-    y = np.arange(10) + 1
-    z = np.random.rand(10)
-
-    d = xr.Dataset({'z': (['x'], z), 'y': (['x'], y)},
-                   coords=dict(x=x))
-
-    d_s = swap_coord(d, {'x': 'y'})
-
-    assert d_s.z.dims == ('y',)
-    assert d_s.x.dims == ('y',)
