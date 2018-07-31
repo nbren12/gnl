@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+import xarray as xr
+import sys
+
+ds = xr.open_zarr(sys.argv[1])
+print(ds)
