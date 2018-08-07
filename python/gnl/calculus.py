@@ -15,11 +15,15 @@ def diff_to_right(x, **kwargs):
     else:
         kwargs['mode'] = mode
 
-    return correlate1d(x, [-1, 1], origin=-1, **kwargs)
+    return correlate1d(x, [1, -1], origin=-1, **kwargs)
 
 
 def c_grid_advective_tendency(u, v, w, f, dx, dz, rho):
-    """Compute the tendency due to advection of a tracer by the winds on the staggered grid. For this to work, u, v, and w must conserve mass
+    """Compute the tendency due to advection of a tracer by the winds on the staggered grid: 
+
+    :math:`- \rho^{-1} div . (\rho v f)`
+
+    For this to work, u, v, and w must conserve mass. Otherwise 
 
     Parameters
     ----------
