@@ -81,9 +81,11 @@ def isel_bc(da: xr.DataArray, idx, dim, boundary='wrap'):
 
     if boundary == 'wrap':
         idx = idx % n
+        return da.isel(**{dim: idx})
     elif boundary == 'extrap':
         idx[idx < 0] = 0
         idx[idx >= n] = n-1
+        return da.isel(**{dim: idx})
     else:
         raise ValueError("Received unknown boundary condition value")
 
@@ -96,6 +98,10 @@ def shift_bc(da: xr.DataArray, shift: int, dim:str, **kwargs):
     idx = np.arange(shift, n+shift)
     return (isel_bc(da, idx, dim, **kwargs)
         .assign_coords(**{dim: da[dim]}))
+
+
+def diff_bc(da, dim, **kwargs):
+    return (shift_bc(da, 1, dim, **kwargs) - da)
 
 
 def get_center_coords(x, block_size):

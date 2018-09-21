@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 def get_ext_modules():
@@ -39,7 +39,7 @@ def get_ext_modules():
 
 
 setup(
-    name='xnoah',
+    name='gnl',
     version='0.0dev',
-    packages=['gnl.xarray', 'gnl.xarray.sam', 'gnl', 'gnl.filter'],
+    packages=find_packages(),
     license='Creative Commons Attribution-Noncommercial-Share Alike license')
