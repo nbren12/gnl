@@ -405,22 +405,33 @@ def destagger(xarr, dim, **kwargs):
 
 def average_west(u, blocks):
     """Average U along the Western edges of the block regions"""
-    w = rg.staggered_to_left(u, blocks['x'], 'x')
+    w = staggered_to_left(u, blocks['x'], 'x')
     x = u['x'][::blocks['x']]
     w['x'] = x
     # average fluxes over the interface
-    return rg.coarsen_dim(w, blocks['y'], 'y')\
-        .rename({'x': 'xs', 'y': 'yc'})
+    return coarsen_dim(w, blocks['y'], 'y')\
 
 
 def average_south(v, blocks):
     """Average V along the southern edges of the block regions"""
-    s = rg.staggered_to_left(v, blocks['y'], 'y')
+    s = staggered_to_left(v, blocks['y'], 'y')
     y = v['y'][::blocks['y']]
     s['y'] = y
     # average fluxes over the interface
-    return rg.coarsen_dim(s, blocks['x'], 'x')\
-        .rename({'y': 'ys', 'y': 'yc'})
+    return coarsen_dim(s, blocks['x'], 'x')
+
+
+def regrid_3d(data, blocks):
+    """Regrid a dataset to a given block structure"""
+    out = {}
+    for key, arr in data.items():
+        if key == 'U':
+            out[key] = average_west(arr, blocks).drop('x')
+        elif key == 'V':
+            out[key] = average_south(arr, blocks).drop('y')
+        else:
+            out[key] = coarsen(arr, blocks=blocks)
+    return xr.Dataset(out)
 
 
 def main(input, output, **kwargs):
