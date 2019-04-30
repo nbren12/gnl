@@ -29,4 +29,7 @@ out = out.compute()
 out['RHO'] = stat.RHO[0]
 out['Ps'] = stat.Ps[0]
 
+# remove singleton time dimension
+out = out.squeeze('time')
+
 out.to_netcdf(f"{run}-x{blocks['x']}-y{blocks['y']}-{first_step}.nc")
